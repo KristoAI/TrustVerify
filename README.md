@@ -1,20 +1,17 @@
-![image](https://github.com/Godotcam/goCamOpenSource/assets/169826477/881f387a-a09d-417e-a1fb-67dab35c5072)
+# TrustVerify.app - Age verification system
 
-
-# Go.cam - Age verification system
-
-[GO.cam](https://go.cam/) offers a simple, easy-to-use application for verifying age online.
+[TrustVerify.app](https://TrustVerify.app/) offers a simple, easy-to-use application for verifying age online.
 With just a few clicks, it allows to verify the age of the person who wishes to access certain sites restricted to minors.
 
 Two methods of age verification are available : facial recognition (selfie) and ID documents verification (ID card, passport, or driver's license).
 
 For the selfie verification, GO.cam utilizes the smartphone camera or computer webcam to assess the user's age through artificial intelligence. If the detected age is too close to the legal age, another verification method is suggested.
 
-### GO.cam is certified 🏅
+### TrustVerify.app is certified 🏅
 
-We are constantly working closely with regulators from many countries to certify GO.cam.
+The original fork team (Go.cam) is constantly working closely with regulators from many countries to certify the project (GO.cam).
 
-Authorities that already certified us:
+Authorities that already certified:
 
 * [Central Authority for the Supervision and Protection of Minors on the Internet in Germany](https://www.kjm-online.de/pressemitteilungen/altersverifikation-persona-gocam/)
 * [Age Check Certification Scheme](https://accscheme.com/registry/age-estimation/gsi-development-sas/)
