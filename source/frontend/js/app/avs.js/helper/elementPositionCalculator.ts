@@ -136,9 +136,10 @@ namespace Avs {
 				$(element).css({
 					//position: 'fixed',
 					//border  : 'solid',
+					// top     : positioning.top,
+					top: 'calc(50% - ' + (positioning.height / 2) + 'px)',
 					width   : positioning.width,
 					height  : positioning.height,
-					top     : positioning.top,
 					left    : positioning.left,
 				});
 

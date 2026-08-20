@@ -6,7 +6,7 @@ namespace Avs {
 
 			export class QrCode extends Common {
 
-				static readonly QR_CODE_SIZE = 10;
+				static readonly QR_CODE_SIZE = 15;
 
 				public element: JQuery;
 				public states: any;

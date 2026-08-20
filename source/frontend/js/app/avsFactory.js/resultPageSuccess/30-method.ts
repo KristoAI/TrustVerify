@@ -10,7 +10,11 @@ namespace AvsFactory {
 					return;
 				}
 
-				if (instance.entity.SelfieAgeDetection.averageAge > 0) {
+				if (
+					instance.entity.SelfieAgeDetection.videoDeviceData != null &&
+					!instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual &&
+					instance.entity.SelfieAgeDetection.averageAge > 0
+				) {
 					instance.ui.ResultPageSuccessSelfieArea.setContent(
 						'<strong>' +
 						SelfieAgeDetectionPage.Method.getAgeAreaString(

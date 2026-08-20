@@ -34,7 +34,7 @@ var AvsFactory;
                     ResultPageFailReasonArea: new Avs.Ui.Library.ResultPageFailReasonArea(ResultPageFail.instance.event),
                     ErrorMessageQrTextArea: new Avs.Ui.Library.ErrorMessageQrTextArea(ResultPageFail.instance.event),
                     ResultPageFailQrArea: new Avs.Ui.Library.ResultPageFailQrArea(ResultPageFail.instance.event),
-                    FailPageErrorQrCode: new Avs.Ui.Library.FailPageErrorQrCode(ResultPageFail.instance.event)
+                    FailPageErrorQrCode: new Avs.Ui.Library.FailPageErrorQrCode(ResultPageFail.instance.event),
                 };
             };
             return Ui;
@@ -84,7 +84,7 @@ var AvsFactory;
                     sessionId: ResultPageFail.instance.entity.VerificationStepGlobal.sessionId,
                     idCountry: ResultPageFail.instance.entity.ScanIdAgeVerification.idCountry,
                     idState: ResultPageFail.instance.entity.ScanIdAgeVerification.idState,
-                    idType: ResultPageFail.instance.entity.ScanIdAgeVerification.idTypeString
+                    idType: ResultPageFail.instance.entity.ScanIdAgeVerification.idTypeString,
                 }).then(function () {
                 }, function (error) {
                     ResultPageFail.instance.ui.ResultPageFailReasonArea.setContent(error.code + ': Could not save your result');
@@ -151,7 +151,7 @@ var AvsFactory;
                     pollingEndpoint: ResultPageFail.Config.POLLING_BASE_ENDPOINT
                 },
                 event: {
-                    debugLevel: ResultPageFail.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: ResultPageFail.Config.DEFAULT_DEBUG_LEVEL,
                 }
             });
             ResultPageFail.Ui.init();
@@ -198,7 +198,7 @@ var AvsFactory;
                 ResultPageSuccess.instance.ui = {
                     ResultPageSuccessScanIdArea: new Avs.Ui.Library.ResultPageSuccessScanIdArea(ResultPageSuccess.instance.event),
                     ResultPageSuccessSelfieArea: new Avs.Ui.Library.ResultPageSuccessSelfieArea(ResultPageSuccess.instance.event),
-                    ResultSuccessButton: new Avs.Ui.Library.ResultSuccessButton(ResultPageSuccess.instance.event)
+                    ResultSuccessButton: new Avs.Ui.Library.ResultSuccessButton(ResultPageSuccess.instance.event),
                 };
             };
             return Ui;
@@ -252,7 +252,9 @@ var AvsFactory;
                 if (!ResultPageSuccess.instance.entity.VerificationStepGlobal.verificationComplete) {
                     return;
                 }
-                if (ResultPageSuccess.instance.entity.SelfieAgeDetection.averageAge > 0) {
+                if (ResultPageSuccess.instance.entity.SelfieAgeDetection.videoDeviceData != null &&
+                    !ResultPageSuccess.instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual &&
+                    ResultPageSuccess.instance.entity.SelfieAgeDetection.averageAge > 0) {
                     ResultPageSuccess.instance.ui.ResultPageSuccessSelfieArea.setContent('<strong>' +
                         AvsFactory.SelfieAgeDetectionPage.Method.getAgeAreaString('Final face average age', ResultPageSuccess.instance.entity.SelfieAgeDetection.averageAge) +
                         '</strong>');
@@ -269,7 +271,7 @@ var AvsFactory;
                     sessionId: ResultPageSuccess.instance.entity.VerificationStepGlobal.sessionId,
                     idCountry: ResultPageSuccess.instance.entity.ScanIdAgeVerification.idCountry,
                     idState: ResultPageSuccess.instance.entity.ScanIdAgeVerification.idState,
-                    idType: ResultPageSuccess.instance.entity.ScanIdAgeVerification.idTypeString
+                    idType: ResultPageSuccess.instance.entity.ScanIdAgeVerification.idTypeString,
                 }).then(function (successData) {
                     ResultPageSuccess.instance.entity.VerificationStepGlobal.isVerified = true;
                     ResultPageSuccess.instance.entity.VerificationStepGlobal.successPayload = successData.successPayload;
@@ -315,7 +317,7 @@ var AvsFactory;
                     apiEndpoint: ResultPageSuccess.Config.API_BASE_ENDPOINT
                 },
                 event: {
-                    debugLevel: ResultPageSuccess.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: ResultPageSuccess.Config.DEFAULT_DEBUG_LEVEL,
                 }
             });
             ResultPageSuccess.Ui.init();
@@ -371,7 +373,7 @@ var AvsFactory;
                     ScanIdAgeVerificationDocumentHelperArea: new Avs.Ui.Library.ScanIdAgeVerificationDocumentHelperArea(ScanIdAgeVerificationIntro.instance.event),
                     ScanIdAgeDetectionCancelButton: new Avs.Ui.Library.ScanIdAgeDetectionCancelButton(ScanIdAgeVerificationIntro.instance.event),
                     ScanIdAgeVerificationUploadImageIntroButton: new Avs.Ui.Library.ScanIdAgeVerificationUploadImageIntroButton(ScanIdAgeVerificationIntro.instance.event),
-                    ScanIdAgeVerificationUploadFileIntroInput: new Avs.Ui.Library.ScanIdAgeVerificationUploadFileIntroInput(ScanIdAgeVerificationIntro.instance.event)
+                    ScanIdAgeVerificationUploadFileIntroInput: new Avs.Ui.Library.ScanIdAgeVerificationUploadFileIntroInput(ScanIdAgeVerificationIntro.instance.event),
                 };
                 ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationTypeArea.hide();
                 ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationDocumentHelperArea.hide();
@@ -468,7 +470,7 @@ var AvsFactory;
                                 for (var i = 0, j = devices.videoinput.length; i < j; i++) {
                                     var device = devices.videoinput[i];
                                     videoInputDeviceIdList[device.id] = true;
-                                    ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationDeviceSelect.addOption(device.label, device.id, device["default"]);
+                                    ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationDeviceSelect.addOption(device.label, device.id, device.default);
                                     foundDevicesNumber++;
                                 }
                                 if (foundDevicesNumber > 1) {
@@ -513,9 +515,14 @@ var AvsFactory;
             Method.renderStateList = function (countryCode) {
                 if (Avs.Config.scanIdList[countryCode]['hasMultipleState']) {
                     ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateArea.show();
-                    for (var i in Avs.Config.scanIdList[countryCode]['stateList']) {
-                        ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateSelect.addOption(Avs.Config.scanIdList[countryCode]['stateList'][i]['stateName'], i, false);
+                    var keys = Object.keys(Avs.Config.scanIdList[countryCode]['stateList']);
+                    // Alphabetically
+                    keys.sort();
+                    ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateSelect.clearAllOptions();
+                    for (var x = 0; x < keys.length; ++x) {
+                        ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateSelect.addOption(Avs.Config.scanIdList[countryCode]['stateList'][keys[x]]['stateName'], keys[x], false);
                     }
+                    ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateSelect.element.trigger('change');
                     Method.renderDocumentList(ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationCountrySelect.getSelectedOption(), ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationStateSelect.getSelectedOption());
                     return;
                 }
@@ -588,7 +595,7 @@ var AvsFactory;
             ScanIdAgeVerificationIntro.instance = new Avs.ScanIdAgeVerificationIntro({
                 debugLevel: ScanIdAgeVerificationIntro.Config.DEFAULT_DEBUG_LEVEL,
                 event: {
-                    debugLevel: ScanIdAgeVerificationIntro.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: ScanIdAgeVerificationIntro.Config.DEFAULT_DEBUG_LEVEL,
                 }
             });
             ScanIdAgeVerificationIntro.instance.entity.VerificationStepGlobal.stepId = Avs.Entity.VerificationStepGlobal.STEP_SCAN_ID_AGE_VERIFICATION_INTRO;
@@ -700,7 +707,8 @@ var AvsFactory;
                     ScanIdAgeVerificationConfirmationYesButton: new Avs.Ui.Library.ScanIdAgeVerificationConfirmationYesButton(ScanIdAgeVerificationPage.instance.event),
                     ScanIdAgeVerificationConfirmationNoButton: new Avs.Ui.Library.ScanIdAgeVerificationConfirmationNoButton(ScanIdAgeVerificationPage.instance.event),
                     DocumentProcessingCanvasLoadingOverlayArea: new Avs.Ui.Library.DocumentProcessingCanvasLoadingOverlayArea(ScanIdAgeVerificationPage.instance.event),
-                    ScanIdAgeVerificationFaceSimilarityArea: new Avs.Ui.Library.ScanIdAgeVerificationFaceSimilarityArea(ScanIdAgeVerificationPage.instance.event)
+                    ScanIdAgeVerificationFaceSimilarityArea: new Avs.Ui.Library.ScanIdAgeVerificationFaceSimilarityArea(ScanIdAgeVerificationPage.instance.event),
+                    VideoMirrorButton: new Avs.Ui.Library.VideoMirrorButton(ScanIdAgeVerificationPage.instance.event),
                 };
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.setStepNumber(7);
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationBirthDateButton.showLoading();
@@ -771,6 +779,9 @@ var AvsFactory;
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingArea.hide();
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingConfirmationArea.hide();
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingProcessArea.hide();
+                });
+                ScanIdAgeVerificationPage.instance.ui.VideoMirrorButton.onClick(function () {
+                    ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.getVideoElement().toggleClass('mirrored');
                 });
             };
             return Binding;
@@ -1132,7 +1143,7 @@ var AvsFactory;
             ScanIdAgeVerificationPage.instance = new Avs.SelfieAgeDetectionPage({
                 debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL,
                 event: {
-                    debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL,
                 },
                 plugin: {
                     Library: {
@@ -1142,7 +1153,7 @@ var AvsFactory;
                                 canvasOverlayElementSelector: ScanIdAgeVerificationPage.Config.CAMERA_SOURCE_CANVAS_OVERLAY_ELEMENT,
                                 videoElementSelector: ScanIdAgeVerificationPage.Config.CAMERA_SOURCE_ROOT_ELEMENT,
                                 detectorType: faceApiDetectorType,
-                                debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL
+                                debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL,
                             },
                             Tesseract: {
                                 idConfig: scanIdAgeVerificationEntity.getIdTypeConfig(),
@@ -1150,7 +1161,7 @@ var AvsFactory;
                                 languagePath: ScanIdAgeVerificationPage.Config.TESSERACT_LANGUAGE_PATH,
                                 corePath: ScanIdAgeVerificationPage.Config.TESSERACT_CORE_PATH,
                                 videoElementSelector: ScanIdAgeVerificationPage.Config.CAMERA_SOURCE_ROOT_ELEMENT,
-                                debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL
+                                debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL,
                             }
                         },
                         Video: {
@@ -1217,7 +1228,7 @@ var AvsFactory;
                     SelfieAgeDetectionDeviceAccessArea: new Avs.Ui.Library.SelfieAgeDetectionDeviceAccessArea(SelfieAgeDetectionIntro.instance.event),
                     SelfieAgeDetectionSubmitArea: new Avs.Ui.Library.SelfieAgeDetectionSubmitArea(SelfieAgeDetectionIntro.instance.event),
                     SelfieAgeDetectionDeviceSelectionArea: new Avs.Ui.Library.SelfieAgeDetectionDeviceSelectionArea(SelfieAgeDetectionIntro.instance.event),
-                    SelfieAgeDetectionCancelButton: new Avs.Ui.Library.SelfieAgeDetectionCancelButton(SelfieAgeDetectionIntro.instance.event)
+                    SelfieAgeDetectionCancelButton: new Avs.Ui.Library.SelfieAgeDetectionCancelButton(SelfieAgeDetectionIntro.instance.event),
                 };
                 if (!SelfieAgeDetectionIntro.instance.entity.SelfieAgeDetection.resourcesPreloaded) {
                     SelfieAgeDetectionIntro.instance.ui.SelfieAgeDetectionStartButton.disable();
@@ -1278,7 +1289,7 @@ var AvsFactory;
                             for (var i = 0, j = devices.videoinput.length; i < j; i++) {
                                 var device = devices.videoinput[i];
                                 videoInputDeviceIdList[device.id] = true;
-                                SelfieAgeDetectionIntro.instance.ui.SelfieAgeDetectionDeviceSelect.addOption(device.label, device.id, device["default"]);
+                                SelfieAgeDetectionIntro.instance.ui.SelfieAgeDetectionDeviceSelect.addOption(device.label, device.id, device.default);
                                 foundDevicesNumber++;
                             }
                             if (foundDevicesNumber > 1) {
@@ -1333,7 +1344,7 @@ var AvsFactory;
             SelfieAgeDetectionIntro.instance = new Avs.SelfieAgeDetectionIntro({
                 debugLevel: SelfieAgeDetectionIntro.Config.DEFAULT_DEBUG_LEVEL,
                 event: {
-                    debugLevel: SelfieAgeDetectionIntro.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: SelfieAgeDetectionIntro.Config.DEFAULT_DEBUG_LEVEL,
                 }
             });
             SelfieAgeDetectionIntro.instance.entity.VerificationStepGlobal.stepId = Avs.Entity.VerificationStepGlobal.STEP_SELFIE_AGE_DETECTION_INTRO;
@@ -1365,9 +1376,9 @@ var AvsFactory;
             Config.CAMERA_SOURCE_CANVAS_OVERLAY_ELEMENT = '#selfieVideoOverlayCanvas';
             Config.FACE_GUIDE_ELEMENT = '#faceGuide';
             Config.FACE_API_WEIGHTS_PATH = '/static/js/appFiles/faw/';
-            Config.MAX_VALID_FACE_SCAN_NUMBER = 3;
-            Config.MAX_TOTAL_FACE_SCAN_NUMBER = 40;
-            Config.MAX_TOTAL_FACE_EXPRESSION_SCAN_NUMBER = 40;
+            Config.MAX_VALID_FACE_SCAN_NUMBER = 5;
+            Config.MAX_TOTAL_FACE_SCAN_NUMBER = 150;
+            Config.MAX_TOTAL_FACE_EXPRESSION_SCAN_NUMBER = 150;
             Config.MIN_ALLOWED_AVERAGE_AGE = 25;
             Config.FACE_SCAN_INTERVAL_MS = 400;
             Config.EVENT_NAME_PREFIX = 'selfieAgeDetectionPage';
@@ -1407,7 +1418,8 @@ var AvsFactory;
                     FaceGuideAgeArea: new Avs.Ui.Library.FaceGuideAgeArea(SelfieAgeDetectionPage.instance.event),
                     FaceGuideSmileStartHintLabel: new Avs.Ui.Library.FaceGuideSmileStartHintLabel(SelfieAgeDetectionPage.instance.event),
                     FaceGuideSmileStopHintLabel: new Avs.Ui.Library.FaceGuideSmileStopHintLabel(SelfieAgeDetectionPage.instance.event),
-                    FaceGuideLoadingProgressBar: new Avs.Ui.Library.FaceGuideLoadingProgressBar(SelfieAgeDetectionPage.instance.event)
+                    FaceGuideLoadingProgressBar: new Avs.Ui.Library.FaceGuideLoadingProgressBar(SelfieAgeDetectionPage.instance.event),
+                    BrightnessIndicatorArea: new Avs.Ui.Library.BrightnessIndicatorArea(SelfieAgeDetectionPage.instance.event),
                 };
                 SelfieAgeDetectionPage.instance.ui.SelfieAgeDetectionLoadingLabelPercentCounter.setStepNumber(5);
                 SelfieAgeDetectionPage.instance.ui.FaceGuideLoadingProgressBar.hide();
@@ -1417,6 +1429,7 @@ var AvsFactory;
                 SelfieAgeDetectionPage.instance.ui.SelfieAgeDetectionLoadingLabelArea.hide();
                 SelfieAgeDetectionPage.instance.ui.SelfieAgeDetectionLoadingLabelPercentCounter.hide();
                 SelfieAgeDetectionPage.instance.ui.FaceGuideAgeArea.hide();
+                SelfieAgeDetectionPage.instance.ui.BrightnessIndicatorArea.hide();
             };
             return Ui;
         }());
@@ -1458,6 +1471,8 @@ var AvsFactory;
                 Method.repositionScanId();
                 SelfieAgeDetectionPage.instance.plugin.Library.Video.CameraSource.getVideoElement().addClass('mirrored');
                 SelfieAgeDetectionPage.instance.ui.SelfieAgeDetectionStatusLabel.setValue('Trying to access your camera');
+                // Show brightness indicator when video starts
+                SelfieAgeDetectionPage.instance.ui.BrightnessIndicatorArea.show();
                 SelfieAgeDetectionPage.instance.plugin.Library.Video.CameraSource.init();
                 SelfieAgeDetectionPage.instance.plugin.Library.Video.CameraSource.showVideo();
                 SelfieAgeDetectionPage.instance.ui.FaceGuideLoadingProgressBar.show();
@@ -1469,7 +1484,7 @@ var AvsFactory;
                     detectedAgeString += 'Adult';
                 }
                 else {
-                    detectedAgeString += 'Id card required';
+                    detectedAgeString += 'Minor';
                 }
                 if (Application.showDetectedAgeNumber) {
                     detectedAgeString += ' (' + age + ')';
@@ -1566,25 +1581,25 @@ var AvsFactory;
                         }
                         return;
                     }
-                    Method.goToNextStep();
+                    if (AvsFactory.StartPage.Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)) {
+                        Method.goToNextStep();
+                        return;
+                    }
+                    Method.goToFailStep(25066, 'Adult age was not detected');
                     return;
                 }
                 if (SelfieAgeDetectionPage.instance.entity.SelfieAgeDetection.totalScanNumber == SelfieAgeDetectionPage.Config.MAX_TOTAL_FACE_SCAN_NUMBER) {
                     Method.goToFailStep(25057, 'Could not detect enough faces from your device video');
                     return;
                 }
-                setTimeout(function () {
-                    Method.detectFace();
-                }, SelfieAgeDetectionPage.Config.FACE_SCAN_INTERVAL_MS);
+                requestAnimationFrame(Method.detectFace);
             };
             Method.checkExpressionStep = function () {
                 if (SelfieAgeDetectionPage.instance.entity.SelfieAgeDetection.totalExpressionScanNumber == SelfieAgeDetectionPage.Config.MAX_TOTAL_FACE_EXPRESSION_SCAN_NUMBER) {
                     Method.goToFailStep(25061, 'Could not detect enough faces from your device video');
                     return;
                 }
-                setTimeout(function () {
-                    Method.detectFaceExpression();
-                }, SelfieAgeDetectionPage.Config.FACE_SCAN_INTERVAL_MS);
+                requestAnimationFrame(Method.detectFaceExpression);
             };
             Method.detectFaceExpression = function () {
                 SelfieAgeDetectionPage.instance.entity.SelfieAgeDetection.totalExpressionScanNumber++;
@@ -1649,11 +1664,17 @@ var AvsFactory;
                 SelfieAgeDetectionPage.instance.plugin.Library.Video.CameraSource.datachannels.webrtc.stopStreaming();
             };
             Method.goToSuccessStep = function () {
+                if (SelfieAgeDetectionPage.instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual) {
+                    Method.goToFailStep(25067, 'Could not detect enough faces from your device video');
+                    return;
+                }
+                SelfieAgeDetectionPage.instance.ui.BrightnessIndicatorArea.hide();
                 AvsFactory.StartPage.Method.showPageStep(AvsFactory.StartPage.Config.RESULT_PAGE_SUCCESS_LAYER);
                 AvsFactory.ResultPageSuccess.init();
                 SelfieAgeDetectionPage.instance.plugin.Library.Video.CameraSource.datachannels.webrtc.stopStreaming();
             };
             Method.goToFailStep = function (failCode, failReason) {
+                SelfieAgeDetectionPage.instance.ui.BrightnessIndicatorArea.hide();
                 AvsFactory.StartPage.Method.showPageStep(AvsFactory.StartPage.Config.RESULT_PAGE_FAIL_LAYER);
                 AvsFactory.ResultPageFail.init();
                 AvsFactory.ResultPageFail.Method.saveError(failCode);
@@ -1694,7 +1715,9 @@ var AvsFactory;
                     AvsFactory.StartPage.Method.renderError(25047, 'Webcam initialization error!');
                     return;
                 });
-                SelfieAgeDetectionPage.instance.event.on(SelfieAgeDetectionPage.Config.EVENT_NAME_PREFIX + '.' + Avs.DataChannel.Webrtc.ON_VIDEO_PLAY, function (event) {
+                SelfieAgeDetectionPage.instance.event.on(SelfieAgeDetectionPage.Config.EVENT_NAME_PREFIX + '.' + Avs.DataChannel.Webrtc.ON_VIDEO_PLAY, function (event, device) {
+                    var webcamUtility = new Avs.Helper.WebcamUtility();
+                    SelfieAgeDetectionPage.instance.entity.SelfieAgeDetection.videoDeviceData = webcamUtility.analyzeDevice(device);
                     SelfieAgeDetectionPage.instance.ui.SelfieAgeDetectionStatusLabel.setValue('Initializing detection libraries');
                     SelfieAgeDetectionPage.instance.debug.logToContainer('<p>Starting face detection.</p>');
                     SelfieAgeDetectionPage.instance.plugin.Library.Ml.FaceApi.loadDetector(function (result) {
@@ -1766,7 +1789,7 @@ var AvsFactory;
             SelfieAgeDetectionPage.instance = new Avs.SelfieAgeDetectionPage({
                 debugLevel: SelfieAgeDetectionPage.Config.DEFAULT_DEBUG_LEVEL,
                 event: {
-                    debugLevel: SelfieAgeDetectionPage.Config.DEFAULT_DEBUG_LEVEL
+                    debugLevel: SelfieAgeDetectionPage.Config.DEFAULT_DEBUG_LEVEL,
                 },
                 plugin: {
                     Library: {
@@ -1776,7 +1799,7 @@ var AvsFactory;
                                 canvasOverlayElementSelector: SelfieAgeDetectionPage.Config.CAMERA_SOURCE_CANVAS_OVERLAY_ELEMENT,
                                 videoElementSelector: SelfieAgeDetectionPage.Config.CAMERA_SOURCE_ROOT_ELEMENT,
                                 detectorType: faceApiDetectorType,
-                                debugLevel: SelfieAgeDetectionPage.Config.DEFAULT_DEBUG_LEVEL
+                                debugLevel: SelfieAgeDetectionPage.Config.DEFAULT_DEBUG_LEVEL,
                             }
                         },
                         Video: {
@@ -1825,6 +1848,10 @@ var AvsFactory;
                 Config.PAYLOAD = config.payload || Config.PAYLOAD;
                 Config.SESSION_ID = config.sessionId || Config.SESSION_ID;
                 Config.PARTNER_COLOR_CONFIG = config.partnerColorConfig || Config.PARTNER_COLOR_CONFIG;
+                if (config.verificationTypeList.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_NAME) ||
+                    config.verificationTypeList.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)) {
+                    Config.VERIFICATION_TYPE_LIST = config.verificationTypeList;
+                }
             };
             Config.MAIN_CONTAINER_SELECTOR = '#avsMainContainer';
             Config.START_PAGE_LAYER_SELECTOR = '#startPage';
@@ -1863,6 +1890,7 @@ var AvsFactory;
             Config.VERIFICATION_VERSION = Config.VERIFICATION_VERSION_STANDARD_V1;
             Config.SESSION_ID = null;
             Config.PARTNER_COLOR_CONFIG = null;
+            Config.VERIFICATION_TYPE_LIST = ['selfie', 'scanId'];
             Config.DEFAULT_DEBUG_LEVEL = 4;
             Config.API_BASE_ENDPOINT = '';
             Config.KEY_LOCAL_STORAGE_TERMS_AGREED = 'GoCamLocalStorageTermsWereAgreed';
@@ -1912,12 +1940,14 @@ var AvsFactory;
                     WebCamAccessHelpBackButton: new Avs.Ui.Library.WebCamAccessHelpBackButton(StartPage.instance.event),
                     TermsAndConditionsArea: new Avs.Ui.Library.TermsAndConditionsArea(StartPage.instance.event),
                     WebCamAccessHelpArea: new Avs.Ui.Library.WebCamAccessHelpArea(StartPage.instance.event),
-                    StartPageTermsArea: new Avs.Ui.Library.StartPageTermsArea(StartPage.instance.event)
+                    StartPageTermsArea: new Avs.Ui.Library.StartPageTermsArea(StartPage.instance.event),
                 };
                 var ipCountry = Application.ipCountry.toUpperCase();
                 if (Application.forceIpCountry) {
                     ipCountry = Application.forceIpCountry.toUpperCase();
                 }
+                StartPage.instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+                StartPage.instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
                 // get this dynamically later
                 var countryToTabVisibilityConfig = {
                     "DE": (_a = {},
@@ -1926,16 +1956,21 @@ var AvsFactory;
                         _a)
                 };
                 if (typeof countryToTabVisibilityConfig[ipCountry] != "undefined") {
-                    if (!countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER]) {
-                        StartPage.instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+                    if (countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER]) {
+                        StartPage.instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
                     }
-                    if (!countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER]) {
-                        StartPage.instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
+                    if (countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER]) {
+                        StartPage.instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
                     }
                 }
-                // handle also the selected tab together with the visible tabs dynamically
-                var defaultTab = StartPage.instance.ui.VerificationTypeTabs.verificationTypeToTabNumber(StartPage.Config.VERIFICATION_TYPE_DEFAULT);
-                StartPage.instance.ui.VerificationTypeTabs.selectTab(defaultTab);
+                else {
+                    if (StartPage.Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_NAME)) {
+                        StartPage.instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+                    }
+                    if (StartPage.Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)) {
+                        StartPage.instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
+                    }
+                }
                 var termsWereAgreed = Avs.Helper.Common.getLocalStorageBooleanValue(StartPage.Config.KEY_LOCAL_STORAGE_TERMS_AGREED);
                 if (termsWereAgreed === true) {
                     StartPage.instance.ui.TermsAndConditionsCheckbox.check();
@@ -1973,6 +2008,7 @@ var AvsFactory;
                     StartPage.instance.entity.VerificationStepGlobal.tesseractType = Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_FR;
                     switch (StartPage.instance.entity.VerificationStepGlobal.verificationType) {
                         case Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_AND_SCAN_ID_OPTIONAL:
+                        case Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_AND_SCAN_ID_FORCED:
                             AvsFactory.SelfieAgeDetectionIntro.init();
                             StartPage.Method.showPageStep(StartPage.Config.SELFIE_AGE_DETECTION_INTRO_LAYER);
                             break;
@@ -2047,8 +2083,10 @@ var AvsFactory;
                 // https://github.com/mexitek/phpColors/blob/master/src/Mexitek/PHPColors/Color.php#L474
                 Method.applyPartnerColor();
                 $('body').attr('style', '');
+                var defaultTab = StartPage.instance.ui.VerificationTypeTabs.getFirstVisibleTab();
+                StartPage.instance.ui.VerificationTypeTabs.selectTab(defaultTab);
+                StartPage.instance.ui.VerificationTypeTabs.clickTab(defaultTab);
                 StartPage.instance.postMessage.emit(StartPage.Config.EVENT_ON_START_PAGE_LOADED);
-                StartPage.instance.entity.VerificationStepGlobal.verificationType = StartPage.Config.VERIFICATION_TYPE_DEFAULT;
                 StartPage.instance.entity.VerificationStepGlobal.partnerId = StartPage.Config.PARTNER_ID;
                 StartPage.instance.entity.VerificationStepGlobal.payload = StartPage.Config.PAYLOAD;
                 StartPage.instance.entity.VerificationStepGlobal.sessionId = StartPage.Config.SESSION_ID;
@@ -2069,7 +2107,7 @@ var AvsFactory;
                     if (typeof StartPage.Config.PARTNER_COLOR_CONFIG.body.foregroundCallToAction === 'undefined') {
                         StartPage.Config.PARTNER_COLOR_CONFIG.body.foregroundCallToAction = StartPage.Config.PARTNER_COLOR_CONFIG.body.foreground;
                     }
-                    $("<style type='text/css'>\n\t\t\n\t\t\t\t\t\t\tbody,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .imageContainer .loadingOverlay,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutError,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutStaticPage,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutTextBlock,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutTextBlock a,\n\t\t\t\t\t\t\t#avsMainContainer .page .informationArea.layoutBlack,\n\t\t\t\t\t\t\t#avsMainContainer .preloader,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .processArea .checkOutList .checkOutItem .statusIcon {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .preloader {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .imageContainer .loadingOverlay {\n\t\t\t\t\t\t\t\topacity: 0.7\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem .iconImage svg {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconImage svg {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button,\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button.layoutRed,\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button.layoutGreen {\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tborder-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 0.4) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconImage,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon.layoutRed,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon.layoutGreen {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tborder-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 0.4) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .termsArea label a {\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#globalIframeCloseButton {\n\t\t\t\t\t\t\t\tbackground-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.background, 0.7) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconLabel .verificationTypeRadioButton {\n\t\t\t\t\t\t\t\tbackground-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 1) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem .iconLabel .verificationTypeRadioButton {\n\t\t\t\t\t\t\t\tborder-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconLabel .verificationTypeRadioButton:after {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .preloader {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t</style>").appendTo("head");
+                    $("<style type='text/css'>\n\t\t\n\t\t\t\t\t\t\tbody,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .imageContainer .loadingOverlay,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutError,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutStaticPage,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutTextBlock,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutTextBlock a,\n\t\t\t\t\t\t\t#avsMainContainer .page .informationArea.layoutBlack,\n\t\t\t\t\t\t\t#avsMainContainer .preloader,\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .processArea .checkOutList .checkOutItem .statusIcon {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .preloader {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page.layoutDocumentProcessing .imageContainer .loadingOverlay {\n\t\t\t\t\t\t\t\topacity: 0.7\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem .iconImage svg {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foreground + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconImage svg {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button,\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button.layoutRed,\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button.layoutGreen {\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tborder-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 0.4) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .submitArea .button.isDisabled {\n\t\t\t\t\t\t\t\topacity: 0.5;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconImage,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon.layoutRed,\n\t\t\t\t\t\t\t#avsMainContainer .page .introIcon.layoutGreen {\n\t\t\t\t\t\t\t\tfill: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tborder-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 0.4) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .termsArea label a {\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#globalIframeCloseButton {\n\t\t\t\t\t\t\t\tbackground-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.background, 0.7) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconLabel .verificationTypeRadioButton {\n\t\t\t\t\t\t\t\tbackground-color: " + Avs.Helper.Common.hexToRgbA(StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background, 1) + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem .iconLabel .verificationTypeRadioButton {\n\t\t\t\t\t\t\t\tborder-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .page .iconArea .iconItem.isSelected .iconLabel .verificationTypeRadioButton:after {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + ";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t#avsMainContainer .preloader {\n\t\t\t\t\t\t\t\tbackground-color: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.background + ";\n\t\t\t\t\t\t\t\tcolor: " + StartPage.Config.PARTNER_COLOR_CONFIG.body.button.foreground + ";\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t</style>").appendTo("head");
                     // go.cam logo replace disabled for now
                     // $(`.headerLogo img`).attr('src', Config.PARTNER_COLOR_CONFIG.header.logo);
                 }
@@ -2244,7 +2282,7 @@ function appGetInternalState() {
     return {
         verificationStepGlobal: verificationStepGlobal,
         selfieAgeDetection: selfieAgeDetection,
-        scanIdAgeVerification: scanIdAgeVerification
+        scanIdAgeVerification: scanIdAgeVerification,
     };
 }
 
@@ -2260,8 +2298,8 @@ var AvsFactory;
                     pollingEndpoint: StartPage.Config.POLLING_BASE_ENDPOINT
                 },
                 event: {
-                    debugLevel: StartPage.Config.DEFAULT_DEBUG_LEVEL
-                }
+                    debugLevel: StartPage.Config.DEFAULT_DEBUG_LEVEL,
+                },
             });
             StartPage.Ui.init();
             StartPage.Event.init();

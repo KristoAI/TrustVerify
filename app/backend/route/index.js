@@ -1,15 +1,19 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.load = void 0;
-const URL = require("url");
-const encryption_1 = require("../lib/encryption");
+exports.load = load;
+const node_fs_1 = __importDefault(require("node:fs"));
+const path_1 = __importDefault(require("path"));
+const url_1 = __importDefault(require("url"));
 const config_1 = require("../config");
+const encryption_1 = require("../lib/encryption");
 const response_1 = require("../lib/response");
 const session_1 = require("../storage/session");
-const fs = require('node:fs');
-const path = require('path');
 function load(app, storage) {
     app.use((req, res, next) => {
+        res.setHeader('Permissions-Policy', 'publickey-credentials-get=(self), publickey-credentials-create=(self), camera=(self)');
         next();
     });
     app.get('/', (req, res) => {
@@ -26,6 +30,8 @@ function load(app, storage) {
         let colorConfigButtonForegroundInput = req.body['colorConfigButtonForegroundInput'];
         let colorConfigButtonForegroundCTAInput = req.body['colorConfigButtonForegroundCTAInput'];
         let callbackUrl = req.body['callbackUrl'];
+        let demoPageUrl = req.body['demoPageUrl'];
+        var demoPageUrlInstance = new URL(demoPageUrl);
         if (colorConfigBodyBackgroundInput == undefined ||
             colorConfigBodyForegroundInput == undefined ||
             colorConfigButtonBackgroundInput == undefined ||
@@ -63,6 +69,7 @@ function load(app, storage) {
                 userAgent: userAgent,
                 websiteHostname: config_1.config.httpServerHost,
                 showDetectedAgeNumber: true,
+                verificationTypeList: ['selfie', 'scanId'],
             },
             verificationVersion: session_1.AvsStorageSession.VERIFICATION_IFRAME_V1,
             linkBack: linkBack,
@@ -73,25 +80,25 @@ function load(app, storage) {
             creationTimestamp: creationTimestamp,
         });
         const urlToken = {
-            protocol: config_1.config.httpServerProtocol,
-            hostname: config_1.config.httpServerHost,
-            port: config_1.config.httpServerPort,
+            protocol: demoPageUrlInstance.protocol,
+            hostname: demoPageUrlInstance.hostname,
+            port: demoPageUrlInstance.port,
             pathname: testPathRedirect,
             query: {
                 d: requestPayload
             },
         };
-        const urlTokenString = URL.format(urlToken);
+        const urlTokenString = url_1.default.format(urlToken);
         const urlIframe = {
-            protocol: config_1.config.httpServerProtocol,
-            hostname: config_1.config.httpServerHost,
-            port: config_1.config.httpServerPort,
+            protocol: demoPageUrlInstance.protocol,
+            hostname: demoPageUrlInstance.hostname,
+            port: demoPageUrlInstance.port,
             pathname: testPathIframe,
             query: {
                 d: requestPayload
             },
         };
-        const urlIframeString = URL.format(urlIframe);
+        const urlIframeString = url_1.default.format(urlIframe);
         res.send(response_1.AvsResponse.successResponse({
             payload: requestPayload,
             url: urlTokenString,
@@ -119,7 +126,7 @@ function load(app, storage) {
     });
     app.post('/callback', (req, res) => {
         let responseString = JSON.stringify(req.body) + "\n";
-        fs.appendFile(path.join(__dirname, './../../../log/callback.log'), responseString, (err) => {
+        node_fs_1.default.appendFile(path_1.default.join(__dirname, './../../../log/callback.log'), responseString, (err) => {
             if (err) {
                 res.send(response_1.AvsResponse.errorResponse(30004, 'Callback file log error: ' + err.toString()));
                 return;
@@ -137,4 +144,3 @@ function load(app, storage) {
         res.send('404');
     });
 }
-exports.load = load;

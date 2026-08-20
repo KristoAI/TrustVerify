@@ -11,12 +11,15 @@ namespace AvsFactory {
 
 				$('body').attr('style', '');
 
+				let defaultTab: number = instance.ui.VerificationTypeTabs.getFirstVisibleTab();
+				instance.ui.VerificationTypeTabs.selectTab(defaultTab);
+				instance.ui.VerificationTypeTabs.clickTab(defaultTab);
+
 				instance.postMessage.emit(Config.EVENT_ON_START_PAGE_LOADED);
 
-				instance.entity.VerificationStepGlobal.verificationType               = Config.VERIFICATION_TYPE_DEFAULT;
-				instance.entity.VerificationStepGlobal.partnerId                      = Config.PARTNER_ID;
-				instance.entity.VerificationStepGlobal.payload                        = Config.PAYLOAD;
-				instance.entity.VerificationStepGlobal.sessionId                      = Config.SESSION_ID;
+				instance.entity.VerificationStepGlobal.partnerId        = Config.PARTNER_ID;
+				instance.entity.VerificationStepGlobal.payload          = Config.PAYLOAD;
+				instance.entity.VerificationStepGlobal.sessionId        = Config.SESSION_ID;
 
 				if (!Avs.Helper.Common.isWebrtcSupported() && !Avs.Helper.Common.isCanvasSupported()) {
 					Method.renderError(25001, 'Your device it\'s not supported');
@@ -83,6 +86,10 @@ namespace AvsFactory {
 								color: ` + Config.PARTNER_COLOR_CONFIG.body.button.foregroundCallToAction + `;
 								background-color: ` + Config.PARTNER_COLOR_CONFIG.body.button.background + `;
 								border-color: ` + Avs.Helper.Common.hexToRgbA(Config.PARTNER_COLOR_CONFIG.body.button.background, 0.4) + `;
+							}
+							
+							#avsMainContainer .page .submitArea .button.isDisabled {
+								opacity: 0.5;
 							}
 							
 							#avsMainContainer .page .iconArea .iconItem.isSelected .iconImage,

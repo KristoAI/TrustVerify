@@ -27,6 +27,7 @@ namespace AvsFactory {
 					ScanIdAgeVerificationConfirmationNoButton              : new Avs.Ui.Library.ScanIdAgeVerificationConfirmationNoButton(instance.event),
 					DocumentProcessingCanvasLoadingOverlayArea             : new Avs.Ui.Library.DocumentProcessingCanvasLoadingOverlayArea(instance.event),
 					ScanIdAgeVerificationFaceSimilarityArea                : new Avs.Ui.Library.ScanIdAgeVerificationFaceSimilarityArea(instance.event),
+					VideoMirrorButton                                      : new Avs.Ui.Library.VideoMirrorButton(instance.event),
 
 				};
 

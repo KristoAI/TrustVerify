@@ -18,6 +18,9 @@ namespace AvsFactory {
 
 				instance.ui.SelfieAgeDetectionStatusLabel.setValue('Trying to access your camera');
 
+				// Show brightness indicator when video starts
+				instance.ui.BrightnessIndicatorArea.show();
+				
 				instance.plugin.Library.Video.CameraSource.init();
 				instance.plugin.Library.Video.CameraSource.showVideo();
 
@@ -34,7 +37,7 @@ namespace AvsFactory {
 					detectedAgeString += 'Adult';
 				}
 				else {
-					detectedAgeString += 'Id card required';
+					detectedAgeString += 'Minor';
 				}
 
 				if ((<any>Application).showDetectedAgeNumber) {
@@ -193,7 +196,12 @@ namespace AvsFactory {
 						return;
 					}
 
-					Method.goToNextStep();
+					if (StartPage.Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)) {
+						Method.goToNextStep();
+						return;
+					}
+
+					Method.goToFailStep(25066, 'Adult age was not detected');
 					return;
 
 				}
@@ -203,9 +211,7 @@ namespace AvsFactory {
 					return;
 				}
 
-				setTimeout(() => {
-					Method.detectFace();
-				}, Config.FACE_SCAN_INTERVAL_MS);
+				requestAnimationFrame(Method.detectFace);
 
 			}
 
@@ -216,9 +222,7 @@ namespace AvsFactory {
 					return;
 				}
 
-				setTimeout(() => {
-					Method.detectFaceExpression();
-				}, Config.FACE_SCAN_INTERVAL_MS);
+				requestAnimationFrame(Method.detectFaceExpression);
 
 			}
 
@@ -328,6 +332,14 @@ namespace AvsFactory {
 			}
 
 			public static goToSuccessStep() {
+
+				if (instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual) {
+					Method.goToFailStep(25067, 'Could not detect enough faces from your device video');
+					return;
+				}
+
+				instance.ui.BrightnessIndicatorArea.hide();
+
 				StartPage.Method.showPageStep(StartPage.Config.RESULT_PAGE_SUCCESS_LAYER);
 				ResultPageSuccess.init();
 
@@ -335,6 +347,7 @@ namespace AvsFactory {
 			}
 
 			public static goToFailStep(failCode: number, failReason: string) {
+				instance.ui.BrightnessIndicatorArea.hide();
 				StartPage.Method.showPageStep(StartPage.Config.RESULT_PAGE_FAIL_LAYER);
 
 				ResultPageFail.init();

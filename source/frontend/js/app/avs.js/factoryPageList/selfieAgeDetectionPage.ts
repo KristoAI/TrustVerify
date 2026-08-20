@@ -49,6 +49,7 @@ namespace Avs {
 		FaceGuideSmileStartHintLabel?: Avs.Ui.Library.FaceGuideSmileStartHintLabel,
 		FaceGuideSmileStopHintLabel?: Avs.Ui.Library.FaceGuideSmileStopHintLabel,
 		FaceGuideLoadingProgressBar?: Avs.Ui.Library.FaceGuideLoadingProgressBar,
+		BrightnessIndicatorArea?: Avs.Ui.Library.BrightnessIndicatorArea,
 
 	}
 }

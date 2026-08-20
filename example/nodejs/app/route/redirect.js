@@ -32,7 +32,8 @@ function load(app, appConfig) {
 				websiteHostname: 'example.com',
 				paramList      : {
 					// optional
-					showDetectedAgeNumber: false
+					showDetectedAgeNumber: false,
+					verificationTypeList : ['selfie', 'scanId'],
 				}
 			},
 			verificationVersion: AvsNodejsSdkV1.VERIFICATION_VERSION_STANDARD_V1,
@@ -44,10 +45,11 @@ function load(app, appConfig) {
 			stateCode  : '',
 		});
 
-		let goCamRedirectUrl = avsSdk.toUrl();
+		let goCamRedirectUrl = avsSdk.toUrl('http://localhost:3300');
 
 		res.render('redirect.twig', {
-			goCamRedirectUrl: goCamRedirectUrl
+			goCamRedirectUrl: goCamRedirectUrl,
+			exampleBaseUrl  : appConfig.exampleBaseUrl,
 		});
 
 	});

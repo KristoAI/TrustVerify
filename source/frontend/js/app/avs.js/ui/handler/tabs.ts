@@ -89,6 +89,10 @@ namespace Avs {
 					return this.element.find('.avsTab:eq(' + tabNumber + ')').hasClass('isSelected');
 				}
 
+				public getFirstVisibleTab(): number {
+					return this.element.find('.avsTab:not(.isHidden)').index();
+				}
+
 				public selectTab(tabNumber: number) {
 
 					this.deselectAllTabs();
@@ -99,6 +103,10 @@ namespace Avs {
 					this.element.parent().find('.avsTabContent').addClass('isHidden');
 					this.element.parent().find('.avsTabContent:eq(' + tabNumber + ')').removeClass('isHidden');
 
+				}
+
+				public clickTab(tabNumber: number) {
+					this.element.find('.avsTab:eq(' + tabNumber + ')').trigger('click');
 				}
 
 				public deselectAllTabs() {

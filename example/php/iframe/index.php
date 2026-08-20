@@ -2,8 +2,11 @@
 
 // include the php library
 require_once '../redirect/lib/AvsPhpSdkV1.php';
+require_once '../config.php';
 
-$cipherKey = 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB';
+global $config;
+
+$cipherKey = $config['cipherKey'];
 
 // create a new verification library instance
 $avsInstance = new AvsPhpSdkV1($cipherKey);
@@ -28,7 +31,7 @@ $websiteHostname = $_SERVER['SERVER_NAME'];
 $showDetectedAgeNumber = true;
 
 // provide the required link back, the user will be taken back to this page after the detection process is finisher with success
-$linkBack    = 'http://localhost:8000';
+$linkBack    = 'http://localhost:8000/iframe';
 $callbackUrl = 'http://localhost:3300/callback';
 
 // provide required user ip
@@ -62,7 +65,8 @@ $avsInstance->fillRequest(
 			'websiteHostname' => $websiteHostname,
 			'paramList'       => array(
 				// optional
-				'showDetectedAgeNumber' => $showDetectedAgeNumber
+				'showDetectedAgeNumber' => $showDetectedAgeNumber,
+				'verificationTypeList'  => array('selfie', 'scanId'),
 			)
 		),
 		'verificationVersion' => AvsPhpSdkV1::VERIFICATION_VERSION_IFRAME_V1,
@@ -76,17 +80,17 @@ $avsInstance->fillRequest(
 );
 
 // encrypt the request object and get the age verification page url
-$verificationUrl = $avsInstance->toIframeUrl();
+$verificationUrl = $avsInstance->toIframeUrl('http://localhost:3300');
 
 ?>
 <html lang="en">
 <head>
 	<title>Age verification using iframe overlay demo</title>
-	<link rel="stylesheet" href="/redirect/css/style.css"/>
+	<link rel="stylesheet" href="<?php echo $config['exampleBaseUrl']; ?>/redirect/css/style.css"/>
 </head>
 <body>
 	<div class="container">
-		<img class="logo" src="/redirect/img/logo.svg"/>
+		<img class="logo" src="<?php echo $config['exampleBaseUrl']; ?>/redirect/img/logo.svg"/>
 		<h1>Age verification using iframe overlay demo</h1>
 		<p>By clicking the button below a screen overlay will open with the go.cam age verification page. </p>
 		<p>The verification result will be posted back to your verification result callback url.</p>
@@ -103,8 +107,8 @@ $verificationUrl = $avsInstance->toIframeUrl();
 		</p>
 	</div>
 	<!-- include the js sdk library -->
-	<script src="js/avsJsSdkV1.js"></script>
+	<script src="<?php echo $config['exampleBaseUrl']; ?>/iframe/js/avsJsSdkV1.js"></script>
 	<!-- handle the verification iframe -->
-	<script src="js/demo.js"></script>
+	<script src="<?php echo $config['exampleBaseUrl']; ?>/iframe/js/demo.js"></script>
 </body>
 </html>

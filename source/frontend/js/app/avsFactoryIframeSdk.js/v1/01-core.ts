@@ -38,9 +38,7 @@ namespace AvsFactoryIframeSdk {
 
 						case Config.EVENT_ON_INITIAL_VERIFICATION_SUCCESS:
 
-							if (eventMessage.data.status) {
-								this.iframeInstance.destroy();
-							}
+							//
 
 							break;
 

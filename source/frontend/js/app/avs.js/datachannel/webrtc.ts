@@ -128,8 +128,16 @@ namespace Avs {
 
 						this.videoElement.onplay = () => {
 
+							const videoTrack = stream.getVideoTracks()[0];
+
 							setTimeout(() => {
-								this.event.emit(this.eventNamesPrefix + Webrtc.ON_VIDEO_PLAY);
+								this.event.emit(
+									this.eventNamesPrefix + Webrtc.ON_VIDEO_PLAY,
+									{
+										label   : videoTrack.label,
+										deviceId: videoTrack.getSettings().deviceId,
+									}
+								);
 							}, Webrtc.ON_VIDEO_PLAY_DELAY_MS);
 
 						};

@@ -1,10 +1,9 @@
-import Express = require('express');
+import Express             from 'express';
+import uaParser            from 'ua-parser-js';
 import {config}            from '../config';
 import {AvsEncryption}     from '../lib/encryption';
 import {AvsRandom}         from '../lib/random';
 import {AvsStorageSession} from "../storage/session";
-
-const uaParser = require('ua-parser-js');
 
 const ROUTE_ROOT = '/token';
 
@@ -95,6 +94,7 @@ export function load(app: Express.Application, storage: AvsStorageSession) {
 				}),
 				isLiveness           : true,
 				showDetectedAgeNumber: payloadParsed['httpParamList']['showDetectedAgeNumber'] || false,
+				verificationTypeList : payloadParsed['httpParamList']['verificationTypeList'] || [],
 				verificationVersion  : verificationVersion,
 				d                    : payload,
 				sessionId            : sessionId,

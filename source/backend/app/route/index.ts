@@ -1,16 +1,18 @@
-import Express = require('express');
-import URL = require('url');
-import {AvsEncryption}     from '../lib/encryption';
-import {config}            from "../config";
-import {AvsResponse}       from "../lib/response";
-import {AvsStorageSession} from "../storage/session";
-
-const fs   = require('node:fs');
-const path = require('path');
+import Express from 'express';
+import fs from 'node:fs';
+import path from 'path';
+import url from 'url';
+import { config } from "../config";
+import { AvsEncryption } from '../lib/encryption';
+import { AvsResponse } from "../lib/response";
+import { AvsStorageSession } from "../storage/session";
 
 export function load(app: Express.Application, storage: AvsStorageSession) {
 
 	app.use((req: Express.Request, res: Express.Response, next: Function) => {
+
+		res.setHeader('Permissions-Policy', 'publickey-credentials-get=(self), publickey-credentials-create=(self), camera=(self)');
+
 		next();
 	});
 
@@ -32,6 +34,9 @@ export function load(app: Express.Application, storage: AvsStorageSession) {
 		let colorConfigButtonForegroundInput    = req.body['colorConfigButtonForegroundInput'];
 		let colorConfigButtonForegroundCTAInput = req.body['colorConfigButtonForegroundCTAInput'];
 		let callbackUrl                         = req.body['callbackUrl'];
+		let demoPageUrl                         = req.body['demoPageUrl'];
+
+		var demoPageUrlInstance = new URL(demoPageUrl);
 
 		if (
 			colorConfigBodyBackgroundInput == undefined ||
@@ -75,6 +80,7 @@ export function load(app: Express.Application, storage: AvsStorageSession) {
 					userAgent            : userAgent,
 					websiteHostname      : config.httpServerHost,
 					showDetectedAgeNumber: true,
+					verificationTypeList : ['selfie', 'scanId'],
 				},
 				verificationVersion: AvsStorageSession.VERIFICATION_IFRAME_V1,
 				linkBack           : linkBack,
@@ -87,26 +93,26 @@ export function load(app: Express.Application, storage: AvsStorageSession) {
 		);
 
 		const urlToken       = {
-			protocol: config.httpServerProtocol,
-			hostname: config.httpServerHost,
-			port    : config.httpServerPort,
+			protocol: demoPageUrlInstance.protocol,
+			hostname: demoPageUrlInstance.hostname,
+			port    : demoPageUrlInstance.port,
 			pathname: testPathRedirect,
 			query   : {
 				d: requestPayload
 			},
 		};
-		const urlTokenString = URL.format(urlToken);
+		const urlTokenString = url.format(urlToken);
 
 		const urlIframe       = {
-			protocol: config.httpServerProtocol,
-			hostname: config.httpServerHost,
-			port    : config.httpServerPort,
+			protocol: demoPageUrlInstance.protocol,
+			hostname: demoPageUrlInstance.hostname,
+			port    : demoPageUrlInstance.port,
 			pathname: testPathIframe,
 			query   : {
 				d: requestPayload
 			},
 		};
-		const urlIframeString = URL.format(urlIframe);
+		const urlIframeString = url.format(urlIframe);
 
 		res.send(AvsResponse.successResponse({
 			payload  : requestPayload,
@@ -148,7 +154,7 @@ export function load(app: Express.Application, storage: AvsStorageSession) {
 		fs.appendFile(
 			path.join(__dirname, './../../../log/callback.log'),
 			responseString,
-			(err: Error) => {
+			(err: any) => {
 				if (err) {
 					res.send(AvsResponse.errorResponse(30004, 'Callback file log error: ' + err.toString()));
 					return;

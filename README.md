@@ -18,6 +18,14 @@ Authorities that already certified:
 
 [ASACP](https://www.asacp.org/) recommends Go.cam as a solution for protecting minors online by guaranteeing secure access to adult content.
 
+## Environment Variables
+
+Copy the `.env.example` file and rename it to `.env` in the project's root directory. The service defaults to using port `3300` on `localhost`.
+
+```sh
+cp .env.example .env
+```
+
 ## Install
 
 This project was developed using Nodejs v20, we recommend using a compatible version.
@@ -46,6 +54,8 @@ By default the project will run on `http://localhost:3300`. Due to the fact that
 By running this project you will be able to go through both types of verification flows: using a redirect or a iframe overlay.
 
 Additionally, we provide a standalone implementation of go.cam in various programming languages. Please check the `example` folder for more information about this.
+
+A MIT license alternative for the example implementation code can be found inside this repository: https://github.com/Godotcam/goCamOpenSourceExamples.
 
 ## Project structure
 

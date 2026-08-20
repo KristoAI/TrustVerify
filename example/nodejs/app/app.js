@@ -6,7 +6,8 @@ const bodyParser = require('body-parser');
 const favicon    = require('serve-favicon');
 
 const appConfig = {
-	cipherKey: 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
+	cipherKey     : 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
+	exampleBaseUrl: 'http://localhost:8000'
 };
 
 app.use(bodyParser.urlencoded({extended: false}));
@@ -25,7 +26,7 @@ const iframeRoute   = require('./route/iframe');
 
 redirectRoute.load(app, appConfig);
 iframeRoute.load(app, appConfig);
-indexRoute.load(app);
+indexRoute.load(app, appConfig);
 
 const server = http.Server(app);
 

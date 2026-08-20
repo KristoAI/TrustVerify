@@ -8,6 +8,7 @@ namespace Avs {
 
 			public videoDeviceId: string;
 			public facingMode: string;
+			public videoDeviceData: Avs.Helper.IAnalysisResponse;
 			public totalScanNumber: number;
 			public totalExpressionScanNumber: number;
 			public validScanNumber: number;

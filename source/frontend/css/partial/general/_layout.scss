@@ -658,9 +658,10 @@ a {
 		}
 
 		.qrCodeArea {
-			padding: 10px 0;
+			padding: 0;
 		}
 
+		// Scoped Radial Gradient for Selfie Page
 		.videoOverlay {
 			position: fixed;
 			z-index: 1;
@@ -669,6 +670,72 @@ a {
 			top: 0;
 			left: 0;
 			background: rgba(0, 0, 0, 0.2);
+
+			// Brightness Indicator (macOS Tahoe Style + Static)
+			.brightness-indicator {
+				position: absolute;
+				top: 16px;
+				right: 16px;
+				background: rgba(30, 30, 30, 0.65);
+				backdrop-filter: blur(20px) saturate(180%);
+				-webkit-backdrop-filter: blur(20px) saturate(180%);
+				border: 0.5px solid rgba(255, 255, 255, 0.12);
+				padding: 10px 5px;
+				border-radius: 14px;
+				z-index: 10;
+				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+				transition: opacity 0.3s ease;
+
+				.ios-slider {
+					display: flex;
+					flex-direction: column-reverse;
+					align-items: center;
+					gap: 6px;
+					height: 110px;
+					width: 16px;
+
+					.icon-moon, .icon-sun {
+						color: rgba(255, 255, 255, 0.85);
+						font-size: 10px;
+						width: auto;
+						height: auto;
+					}
+
+					.slider-track {
+						flex-grow: 1;
+						width: 100%;
+						background: rgba(255, 255, 255, 0.08);
+						border-radius: 8px;
+						overflow: hidden;
+						position: relative;
+
+						.slider-fill {
+							position: absolute;
+							bottom: 1px;
+							left: 1px;
+							right: 1px;
+							width: calc(100% - 2px);
+							height: 50%;
+							background: #fff;
+							border-radius: 7px 7px 0 0;
+							display: flex;
+							flex-direction: column;
+							align-items: center;
+							justify-content: flex-start;
+							padding-top: 6px;
+							gap: 2px;
+
+							.icon-chevron {
+								color: rgba(0, 0, 0, 0.4);
+								font-size: 8px;
+								font-weight: bold;
+							}
+						}
+					}
+				}
+
+			}
+
 		}
 
 		.videoSource {
@@ -721,13 +788,14 @@ a {
 
 			&.layoutFace {
 				position: fixed;
-				opacity: 0.8;
+				opacity: 0.9;
 				border-radius: 100%;
 				@include flexCenter;
 				flex-direction: column;
 				color: $colorWhite;
 				overflow: hidden;
 				text-shadow: 1px 1px 2px $colorBlack;
+				z-index: 3;
 
 				.loadingIconArea {
 					display: flex;
@@ -917,6 +985,27 @@ a {
 
 		}
 
+		.videoMirrorContainer {
+			z-index: 5;
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			font-size: 32px;
+			opacity: 0.8;
+
+			a {
+				cursor: pointer;
+				color: $colorWhite;
+				padding: 10px;
+
+				&:hover {
+					opacity: 0.5;
+				}
+
+			}
+
+		}
+
 	}
 
 	#debugArea {
@@ -985,6 +1074,15 @@ a {
 		width: 100%;
 		height: calc(100%);
 	}
+
+	#selfieAgeDetectionPage {
+
+		.videoOverlay {
+			background: radial-gradient(circle, rgba(255,255,255,0) 20%, rgba(255,255,255,1) 75%);
+		}
+
+	}
+
 
 }
 

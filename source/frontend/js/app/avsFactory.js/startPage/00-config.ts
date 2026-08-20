@@ -21,6 +21,13 @@ namespace AvsFactory {
 
 				Config.PARTNER_COLOR_CONFIG = config.partnerColorConfig || Config.PARTNER_COLOR_CONFIG;
 
+				if (
+					config.verificationTypeList.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_NAME) ||
+					config.verificationTypeList.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)
+				) {
+					Config.VERIFICATION_TYPE_LIST = config.verificationTypeList;
+				}
+
 			}
 
 			public static MAIN_CONTAINER_SELECTOR: string                       = '#avsMainContainer';
@@ -71,6 +78,8 @@ namespace AvsFactory {
 			public static SESSION_ID: string | null                                       = null;
 			public static PARTNER_COLOR_CONFIG: IStartPageConfigPartnerColorConfig | null = null;
 
+			public static VERIFICATION_TYPE_LIST: string[] = ['selfie', 'scanId'];
+
 			public static DEFAULT_DEBUG_LEVEL = 4;
 
 			public static API_BASE_ENDPOINT = '';
@@ -94,6 +103,7 @@ namespace AvsFactory {
 			payload: string,
 			sessionId: string,
 			partnerColorConfig?: IStartPageConfigPartnerColorConfig
+			verificationTypeList?: string[]
 		}
 
 		interface IStartPageConfigPartnerColorConfig {

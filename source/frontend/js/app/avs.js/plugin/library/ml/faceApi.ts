@@ -16,7 +16,13 @@ namespace Avs {
 					static readonly TINY_FACE_DETECTOR_INPUT_SIZE      = 416;
 					static readonly TINY_FACE_DETECTOR_SCORE_THRESHOLD = 0.3;
 
+					static readonly CONFIG_TF_BACKEND_WEBGL = 'webgl';
+					static readonly CONFIG_TF_BACKEND_WASM  = 'wasm';
+
 					static readonly EXPRESSION_MIN_CONFIDENCE = 0.5;
+
+					static readonly TIMEOUT_TRIGGER          = 4000;
+					static readonly TIMEOUT_TRIGGER_TRESHOLD = 2;
 
 					static readonly EXPRESSION_ANGRY     = 'angry';
 					static readonly EXPRESSION_DISGUSTED = 'disgusted';
@@ -43,6 +49,8 @@ namespace Avs {
 
 					public videoElement: HTMLVideoElement;
 					public canvasOverlayElement: HTMLCanvasElement;
+
+					public detectFaceTimeoutTriggerNumber: number;
 
 					constructor(
 						config: IFaceApiConfig,
@@ -73,6 +81,12 @@ namespace Avs {
 						this.landmarksModelLoaded      = false;
 						this.recognitionModelLoaded    = false;
 						this.faceExpressionModelLoaded = false;
+
+						this.detectFaceTimeoutTriggerNumber = 0;
+
+						if (this.config.tfBackend !== undefined) {
+							window.faceapi.tf.setBackend(this.config.tfBackend);
+						}
 
 					}
 
@@ -290,27 +304,62 @@ namespace Avs {
 							return;
 						}
 
+						let doCallback     = true;
+						let timeoutHandler = setTimeout(() => {
+							this.detectFaceTimeoutTriggerNumber++;
+							doCallback = false;
+
+							// if detect face stalls 2 times in a row, try switching the backend to wasm
+							if (this.detectFaceTimeoutTriggerNumber == FaceApi.TIMEOUT_TRIGGER_TRESHOLD) {
+								window.faceapi.tf.setBackend(FaceApi.CONFIG_TF_BACKEND_WASM);
+								window.faceapi.tf.ready().then(
+									() => {
+										cb(null);
+									},
+									(error: Error) => {
+										cb(null);
+									}
+								)
+
+								return;
+							}
+
+							cb(null);
+							return;
+
+						}, FaceApi.TIMEOUT_TRIGGER);
+
 						this.debug.info('detect face');
 
 						this.faceApiClass.detectSingleFace(this.videoElement, this.detectorOptions).withFaceLandmarks().withFaceDescriptor().then(
 							(result: any) => {
 
+								clearTimeout(timeoutHandler);
+
 								// face was detected
 								if (typeof result !== 'undefined') {
 
-									cb(result);
+									if (doCallback) {
+										cb(result);
+									}
 
 								}
 								else {
 
-									cb(null);
+									if (doCallback) {
+										cb(null);
+									}
 
 								}
 
 							},
 							(error: Error) => {
 
-								cb(null);
+								clearTimeout(timeoutHandler);
+
+								if (doCallback) {
+									cb(null);
+								}
 
 							}
 						);
@@ -571,6 +620,7 @@ namespace Avs {
 					canvasOverlayElementSelector: string,
 					videoElementSelector: string,
 					detectorType: string,
+					tfBackend?: string,
 					debugLevel?: number,
 				}
 

@@ -1,14 +1,20 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
+const dotenv_1 = __importDefault(require("dotenv"));
+// Load the `.env` file
+dotenv_1.default.config({ quiet: true });
 const configObject = {
-    httpServerProtocol: 'http',
-    httpServerHost: 'localhost',
-    httpServerPort: 3300,
+    httpServerProtocol: process.env.HTTP_SERVER_PROTOCOL || 'http',
+    httpServerHost: process.env.HTTP_SERVER_HOST || 'localhost',
+    httpServerPort: process.env.HTTP_SERVER_PORT || 3300,
     htmlFilePath: './app/frontend/views/',
     encryption: {
-        key: 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
-        algorithm: 'aes-256-cbc',
+        key: process.env.ENCRYPTION_KEY || 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
+        algorithm: process.env.ENCRYPTION_ALGORITHM || 'aes-256-cbc',
     },
     storage: {
         payloadExpirationTime: 10 * 60 * 1000,
@@ -22,7 +28,7 @@ const configObject = {
         maxAge: 30 * 24 * 60 * 60 * 1000
     },
     cacheBuster: +new Date(),
-    enableFrontEndDebug: false,
+    enableFrontEndDebug: process.env.ENABLE_FRONTEND_DEBUG || false,
     countryAgeMajority: {
         "A1": 18,
         "A2": 18,

@@ -32,7 +32,8 @@ function load(app, appConfig) {
 				websiteHostname: 'example.com',
 				paramList      : {
 					// optional
-					showDetectedAgeNumber: false
+					showDetectedAgeNumber: false,
+					verificationTypeList : ['selfie', 'scanId'],
 				}
 			},
 			verificationVersion: AvsNodejsSdkV1.VERIFICATION_VERSION_IFRAME_V1,
@@ -44,10 +45,11 @@ function load(app, appConfig) {
 			stateCode  : '',
 		});
 
-		let goCamIframeUrl = avsSdk.toIframeUrl();
+		let goCamIframeUrl = avsSdk.toIframeUrl('http://localhost:3300');
 
 		res.render('iframe.twig', {
-			goCamIframeUrl: goCamIframeUrl
+			goCamIframeUrl: goCamIframeUrl,
+			exampleBaseUrl: appConfig.exampleBaseUrl,
 		});
 
 	});
@@ -78,7 +80,7 @@ function load(app, appConfig) {
 			return;
 		}
 
-		if (avsSdk.verificationResult['state'] === 'success') {
+		if (avsSdk.verificationResult['stateInt'] === 2) {
 			res.send({
 				success  : 1,
 				sessionId: avsSdk.verificationResult['sessionId']

@@ -4,10 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AvsStorageSession = void 0;
+const axios_1 = __importDefault(require("axios"));
+const ua_parser_js_1 = __importDefault(require("ua-parser-js"));
 const encryption_1 = require("../lib/encryption");
 const payload_1 = require("./payload");
-const axios_1 = __importDefault(require("axios"));
-const uaParser = require('ua-parser-js');
 class AvsStorageSession {
     constructor() {
         this.sessionIdStart = this.getNow();
@@ -45,7 +45,7 @@ class AvsStorageSession {
         this.payloadInstance.store(payload);
         let payloadParsed = encryption_1.AvsEncryption.decryptString(payload);
         let sessionId = this.getUniqueId();
-        let uaParsed = uaParser(payloadParsed.httpParamList.userAgent);
+        let uaParsed = (0, ua_parser_js_1.default)(payloadParsed.httpParamList.userAgent);
         let sessionState = AvsStorageSession.SESSION_STATE_IN_PROGRESS;
         if (this.payloadInstance.isStored(payload)) {
             sessionState = AvsStorageSession.SESSION_STATE_LINK_ALREADY_USED;

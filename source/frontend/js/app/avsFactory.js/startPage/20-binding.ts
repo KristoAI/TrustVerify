@@ -23,6 +23,7 @@ namespace AvsFactory {
 					switch (instance.entity.VerificationStepGlobal.verificationType) {
 
 						case Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_AND_SCAN_ID_OPTIONAL:
+						case Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_AND_SCAN_ID_FORCED:
 
 							SelfieAgeDetectionIntro.init();
 							Method.showPageStep(Config.SELFIE_AGE_DETECTION_INTRO_LAYER);

@@ -9,6 +9,9 @@ namespace Avs {
 			static readonly VERIFICATION_TYPE_CREDIT_CARD                 = 3;
 			static readonly VERIFICATION_TYPE_SCAN_ID                     = 4;
 
+			static readonly VERIFICATION_TYPE_SELFIE_NAME  = 'selfie';
+			static readonly VERIFICATION_TYPE_SCAN_ID_NAME = 'scanId';
+
 			static readonly FACE_API_TYPE_FAST    = 1;
 			static readonly FACE_API_TYPE_PRECISE = 2;
 

@@ -83,6 +83,12 @@ namespace AvsFactory {
 
 				});
 
+				instance.ui.VideoMirrorButton.onClick(() => {
+
+					instance.plugin.Library.Video.CameraSource.getVideoElement().toggleClass('mirrored');
+
+				});
+
 			}
 
 		}

@@ -1,7 +1,7 @@
-import Express = require('express');
-import {AvsResponse}       from "../lib/response";
-import {AvsStorageSession} from "../storage/session";
-import {config}            from "../config";
+import Express from 'express';
+import { config } from "../config";
+import { AvsResponse } from "../lib/response";
+import { AvsStorageSession } from "../storage/session";
 
 const ROUTE_ROOT: string = '/result';
 

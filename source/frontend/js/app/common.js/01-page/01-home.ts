@@ -9,6 +9,7 @@ declare namespace Application {
 	export var d: string;
 	export var sessionId: string;
 	export var partnerColorConfig: any;
+	export var verificationTypeList: string[];
 	export var ipCountry: string;
 	export var forceIpCountry: string;
 	export var deviceInfo: {
@@ -127,6 +128,7 @@ namespace AvsHome {
 					colorConfigButtonForegroundInput   : colorConfigButtonForegroundInput.val().toString(),
 					colorConfigButtonForegroundCTAInput: colorConfigButtonForegroundCTAInput.val().toString(),
 					callbackUrl                        : accessInformationCallbackUrlInput.val(),
+					demoPageUrl                        : window.location.href,
 				};
 
 				Ajax.getVerificationPayloadAndUrl(postData).then(
@@ -165,6 +167,7 @@ namespace AvsHome {
 					colorConfigButtonForegroundInput   : colorConfigButtonForegroundInput.val().toString(),
 					colorConfigButtonForegroundCTAInput: colorConfigButtonForegroundCTAInput.val().toString(),
 					callbackUrl                        : accessInformationCallbackUrlInput.val(),
+					demoPageUrl                        : window.location.href,
 				};
 
 				Ajax.getVerificationPayloadAndUrl(postData).then(
@@ -264,7 +267,7 @@ namespace AvsHome {
 
 					case AvsFactoryIframeSdk.V1.Config.EVENT_ON_INITIAL_VERIFICATION_SUCCESS:
 
-						appendToLog('Verification already completed, delete the "isAgeVerified" cookie to retry');
+						appendToLog('Verification already completed');
 
 						Ajax.validateVerificationPayload({
 							verificationPayload: eventMessage.data.payload
@@ -276,7 +279,9 @@ namespace AvsHome {
 							},
 							(error: IErrorResponse) => {
 
-								triggerError(error);
+								appendToLog(error.msg);
+								appendToLog('Starting the verification process');
+								avsInstance.emit(AvsFactoryIframeSdk.V1.Config.EVENT_RESOURCE_PRELOAD);
 
 							}
 						);
@@ -335,7 +340,7 @@ namespace AvsHome {
 							},
 							(error: IErrorResponse) => {
 
-								triggerError(error);
+								appendToLog(error.msg);
 
 							}
 						);

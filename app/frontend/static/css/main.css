@@ -600,7 +600,7 @@ a {
   text-decoration: none;
 }
 #avsMainContainer .page .qrCodeArea {
-  padding: 10px 0;
+  padding: 0;
 }
 #avsMainContainer .page .videoOverlay {
   position: fixed;
@@ -610,6 +610,63 @@ a {
   top: 0;
   left: 0;
   background: rgba(0, 0, 0, 0.2);
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(30, 30, 30, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  padding: 10px 5px;
+  border-radius: 14px;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.3s ease;
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 6px;
+  height: 110px;
+  width: 16px;
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider .icon-moon, #avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider .icon-sun {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 10px;
+  width: auto;
+  height: auto;
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider .slider-track {
+  flex-grow: 1;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider .slider-track .slider-fill {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  right: 1px;
+  width: calc(100% - 2px);
+  height: 50%;
+  background: #fff;
+  border-radius: 7px 7px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 6px;
+  gap: 2px;
+}
+#avsMainContainer .page .videoOverlay .brightness-indicator .ios-slider .slider-track .slider-fill .icon-chevron {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 8px;
+  font-weight: bold;
 }
 #avsMainContainer .page .videoSource {
   position: fixed;
@@ -654,7 +711,7 @@ a {
 }
 #avsMainContainer .page .maskGuide.layoutFace {
   position: fixed;
-  opacity: 0.8;
+  opacity: 0.9;
   border-radius: 100%;
   display: flex;
   align-items: center;
@@ -663,6 +720,7 @@ a {
   color: rgb(255, 255, 255);
   overflow: hidden;
   text-shadow: 1px 1px 2px rgb(0, 0, 0);
+  z-index: 3;
 }
 #avsMainContainer .page .maskGuide.layoutFace .loadingIconArea {
   display: flex;
@@ -816,6 +874,22 @@ a {
 #avsMainContainer .page#termsAndConditionsArea .introHeading {
   margin-left: 0;
 }
+#avsMainContainer .page .videoMirrorContainer {
+  z-index: 5;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: 32px;
+  opacity: 0.8;
+}
+#avsMainContainer .page .videoMirrorContainer a {
+  cursor: pointer;
+  color: rgb(255, 255, 255);
+  padding: 10px;
+}
+#avsMainContainer .page .videoMirrorContainer a:hover {
+  opacity: 0.5;
+}
 #avsMainContainer #debugArea {
   position: fixed;
   top: 0;
@@ -872,6 +946,9 @@ a {
   text-align: center;
   width: 100%;
   height: 100%;
+}
+#avsMainContainer #selfieAgeDetectionPage .videoOverlay {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0) 20%, rgb(255, 255, 255) 75%);
 }
 
 @keyframes scanning {

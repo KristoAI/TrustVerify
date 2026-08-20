@@ -23,10 +23,10 @@ namespace AvsFactory {
 
 			public static FACE_API_WEIGHTS_PATH = '/static/js/appFiles/faw/';
 
-			public static MAX_VALID_FACE_SCAN_NUMBER = 3;
-			public static MAX_TOTAL_FACE_SCAN_NUMBER = 40;
+			public static MAX_VALID_FACE_SCAN_NUMBER = 5;
+			public static MAX_TOTAL_FACE_SCAN_NUMBER = 150;
 
-			public static MAX_TOTAL_FACE_EXPRESSION_SCAN_NUMBER = 40;
+			public static MAX_TOTAL_FACE_EXPRESSION_SCAN_NUMBER = 150;
 
 			public static MIN_ALLOWED_AVERAGE_AGE = 25;
 

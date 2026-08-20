@@ -18,6 +18,7 @@ namespace AvsFactory {
 					FaceGuideSmileStartHintLabel                : new Avs.Ui.Library.FaceGuideSmileStartHintLabel(instance.event),
 					FaceGuideSmileStopHintLabel                 : new Avs.Ui.Library.FaceGuideSmileStopHintLabel(instance.event),
 					FaceGuideLoadingProgressBar                 : new Avs.Ui.Library.FaceGuideLoadingProgressBar(instance.event),
+					BrightnessIndicatorArea                     : new Avs.Ui.Library.BrightnessIndicatorArea(instance.event),
 				};
 
 				instance.ui.SelfieAgeDetectionLoadingLabelPercentCounter.setStepNumber(5);
@@ -30,6 +31,8 @@ namespace AvsFactory {
 				instance.ui.SelfieAgeDetectionLoadingLabelArea.hide();
 				instance.ui.SelfieAgeDetectionLoadingLabelPercentCounter.hide();
 				instance.ui.FaceGuideAgeArea.hide();
+
+				instance.ui.BrightnessIndicatorArea.hide();
 
 			}
 

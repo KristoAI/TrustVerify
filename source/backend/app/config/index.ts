@@ -1,14 +1,30 @@
+import dotenv from 'dotenv';
+// Load the `.env` file
+dotenv.config({ quiet: true });
+
+// Type definition for environmental variables (.env)
+declare var process: {
+  env: {
+		HTTP_SERVER_PROTOCOL: string;
+		HTTP_SERVER_HOST: string;
+		HTTP_SERVER_PORT: number;
+		ENCRYPTION_KEY: string;
+		ENCRYPTION_ALGORITHM: string;
+		ENABLE_FRONTEND_DEBUG: boolean
+	}
+}
+
 const configObject = {
 
-	httpServerProtocol: 'http',
-	httpServerHost    : 'localhost',
-	httpServerPort    : 3300,
+	httpServerProtocol: process.env.HTTP_SERVER_PROTOCOL || 'http',
+	httpServerHost    : process.env.HTTP_SERVER_HOST || 'localhost',
+	httpServerPort    : process.env.HTTP_SERVER_PORT || 3300,
 
 	htmlFilePath: './app/frontend/views/',
 
 	encryption: {
-		key      : 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
-		algorithm: 'aes-256-cbc',
+		key      : process.env.ENCRYPTION_KEY || 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB',
+		algorithm: process.env.ENCRYPTION_ALGORITHM || 'aes-256-cbc',
 	},
 
 	storage: {
@@ -27,7 +43,7 @@ const configObject = {
 
 	cacheBuster: +new Date(),
 
-	enableFrontEndDebug: false,
+	enableFrontEndDebug: process.env.ENABLE_FRONTEND_DEBUG || false,
 
 	countryAgeMajority: {
 		"A1": 18,

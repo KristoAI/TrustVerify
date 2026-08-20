@@ -1,12 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AvsEncryption = void 0;
+const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
-const crypto = require('crypto');
 class AvsEncryption {
     static encryptObject(object) {
-        const iv = crypto.randomBytes(16);
-        let cipher = crypto.createCipheriv(config_1.config.encryption.algorithm, Buffer.from(config_1.config.encryption.key), iv);
+        const iv = crypto_1.default.randomBytes(16);
+        let cipher = crypto_1.default.createCipheriv(config_1.config.encryption.algorithm, Buffer.from(config_1.config.encryption.key), iv);
         let encrypted = cipher.update(JSON.stringify(object));
         encrypted = Buffer.concat([encrypted, cipher.final()]);
         return iv.toString('hex') + '|:' + encrypted.toString('hex');
@@ -15,7 +18,7 @@ class AvsEncryption {
         let encryptedStringParts = encryptedString.split(':');
         let iv = Buffer.from(encryptedStringParts[0], 'hex');
         let encryptedData = Buffer.from(encryptedStringParts[1], 'hex');
-        let decipher = crypto.createDecipheriv(config_1.config.encryption.algorithm, Buffer.from(config_1.config.encryption.key), iv);
+        let decipher = crypto_1.default.createDecipheriv(config_1.config.encryption.algorithm, Buffer.from(config_1.config.encryption.key), iv);
         let decrypted = decipher.update(encryptedData);
         decrypted = Buffer.concat([decrypted, decipher.final()]);
         return JSON.parse(decrypted.toString());

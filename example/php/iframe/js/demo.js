@@ -37,12 +37,15 @@
 			// check phase: age verification was successful on a previous verification process, user is already verified
 			case AvsJsSdk.V1.Config.EVENT_ON_INITIAL_VERIFICATION_SUCCESS:
 
-				appendToLog('Verification already completed, delete the "isAgeVerified" cookie to retry');
+				appendToLog('Verification already completed');
 
 				payloadIntegrityCheck(eventMessage.data.payload, function (data) {
 
+					// verification failed, gracefully allow the user to continue with the verification process
 					if (data.error) {
 						appendToLog(data.error.msg);
+						appendToLog('Starting the verification process');
+						avsInstance.emit(AvsJsSdk.V1.Config.EVENT_RESOURCE_PRELOAD);
 						return;
 					}
 

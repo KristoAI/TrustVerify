@@ -2,9 +2,11 @@
 
 // include the php library
 require_once '../redirect/lib/AvsPhpSdkV1.php';
+require_once '../config.php';
 
-// provide the access information, find this credentials in your partner account
-$cipherKey = 'zIkmW2zEgzlTLTRC5xeMbcOhHcE5sBHB';
+global $config;
+
+$cipherKey = $config['cipherKey'];
 
 $demoUserId = 0;
 
@@ -41,7 +43,7 @@ catch (Exception $e) {
 }
 
 // check the integrity of the verification payload
-if ($avsInstance->verificationResult['state'] == 'success') {
+if ($avsInstance->verificationResult['stateInt'] == 2) {
 
 	// if the user it's not logged in you can save this result in a session for later use (after a successful login)
 	// $_SESSION['ageVerificationSessionId'] = $payloadDecrypted['sessionId'];

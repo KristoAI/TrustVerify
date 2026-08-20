@@ -1,11 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.load = void 0;
+exports.load = load;
+const ua_parser_js_1 = __importDefault(require("ua-parser-js"));
 const config_1 = require("../config");
 const encryption_1 = require("../lib/encryption");
 const random_1 = require("../lib/random");
 const session_1 = require("../storage/session");
-const uaParser = require('ua-parser-js');
 const ROUTE_ROOT = '/token';
 function load(app, storage) {
     app.get(ROUTE_ROOT, (req, res) => {
@@ -60,7 +63,7 @@ function load(app, storage) {
         req.session.accessTime = +new Date();
         req.session.sessionStartId = avsSession.sessionId;
         req.session.payload = payload;
-        let userAgent = typeof req.headers['user-agent'] != 'undefined' ? uaParser(req.headers['user-agent']) : '';
+        let userAgent = typeof req.headers['user-agent'] != 'undefined' ? (0, ua_parser_js_1.default)(req.headers['user-agent']) : '';
         res.render('token/index.twig', {
             js: {
                 onDocumentReady: 'AvsToken.main',
@@ -71,6 +74,7 @@ function load(app, storage) {
                 }),
                 isLiveness: true,
                 showDetectedAgeNumber: payloadParsed['httpParamList']['showDetectedAgeNumber'] || false,
+                verificationTypeList: payloadParsed['httpParamList']['verificationTypeList'] || [],
                 verificationVersion: verificationVersion,
                 d: payload,
                 sessionId: sessionId,
@@ -83,4 +87,3 @@ function load(app, storage) {
         });
     };
 }
-exports.load = load;

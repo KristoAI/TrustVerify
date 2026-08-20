@@ -265,8 +265,8 @@
 					</a>
 				</div>
 
-				<h2 class="introText">Don't worry, <strong>we do NOT store</strong> any <strong>images</strong> or <strong>data</strong> related to this detection.</h2>
-				<h2 class="introText avsTabContent">We will take a few snapshots of your <strong>webcam</strong> and <strong>detect your age</strong> based on your <strong>face</strong>. You will be also asked to change your <strong>face expression</strong> for a short while. In case of failure you will be asked to provide a real document photo.</h2>
+				<h2 class="introText">Don't worry, we neither store nor transmit any images or personal data from this detection.</h2>
+				<h2 class="introText avsTabContent">We will locally capture a few webcam images on your device to estimate your age. You'll be asked to briefly change facial expressions. If unsuccessful, you may need to provide an official photo ID.</h2>
 				<h2 class="introText avsTabContent isHidden">We will ask you to provide us with a <strong>image</strong> of your <strong>document</strong> or take <strong>a snapshot</strong> of it using your <strong>webcam</strong>. Your <strong>date of birth</strong> will be extracted in order to confirm your current age.</h2>
 				<h2 class="introText layoutCertification">
 					<span class="certificationColumn">
@@ -291,16 +291,16 @@
 			</div>
 		</div>
 
-		<div id="faceApiPreloaderArea" class="preloader isHidden" style="display: none;">
+		<div id="faceApiPreloaderArea" class="preloader isHidden">
 			<div id="faceApiPreloaderTextArea">
-				<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>Preloading verification resources:
+				<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> Preloading verification resources:
 			</div>
 			<div id="faceApiPreloaderPercentArea" class="counter">100%</div>
 		</div>
 
 		<div id="tesseractPreloaderArea" class="preloader isHidden">
 			<div id="tesseractPreloaderTextArea">
-				<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>Preloading verification resources:
+				<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> Preloading verification resources:
 			</div>
 			<div id="tesseractPreloaderPercentArea" class="counter"></div>
 		</div>
@@ -385,7 +385,20 @@
 		</div>
 
 		<div id="selfieAgeDetectionPage" class="page layoutDetection isHidden">
-			<div class="videoOverlay"></div>
+			<div class="videoOverlay">
+				<div class="brightness-indicator" id="brightnessIndicatorArea">
+					<div class="ios-slider">
+						<i class="fa fa-moon-o icon-moon" aria-hidden="true"></i>
+						<div class="slider-track">
+							<div class="slider-fill">
+								<i class="fa fa-angle-up icon-chevron" aria-hidden="true"></i>
+								<i class="fa fa-angle-up icon-chevron" aria-hidden="true"></i>
+							</div>
+						</div>
+						<i class="fa fa-sun-o icon-sun" aria-hidden="true"></i>
+					</div>
+				</div>
+			</div>
 			<div id="selfieVideoContainer" class="videoSource">
 				<video id="selfieVideo" autoplay="" muted="" playsinline=""></video>
 				<canvas id="selfieVideoOverlayCanvas" class="overlayCanvas"></canvas>
@@ -493,6 +506,12 @@
 		</div>
 
 		<div id="scanIdAgeVerificationPage" class="page layoutDetection isHidden">
+
+			<div class="videoMirrorContainer">
+				<a id="videoMirrorButton">
+					<i class="fa fa-refresh" aria-hidden="true"></i>
+				</a>
+			</div>
 
 			<div id="ratioRecommendArea" class="page layoutHint isHidden">
 				<h1 class="introHeading">
@@ -688,10 +707,10 @@
 
 <script type="text/javascript" crossorigin="anonymous" src="/static/js/vendor/jquery-3.5.1.min.js"></script>
 <script type="text/javascript" crossorigin="anonymous" src="/static/js/vendor/adapter-7.6.4/adapter.js"></script>
-<script type="text/javascript" crossorigin="anonymous" src="/static/js/vendor/face-api-0.21.0/face-api.js"></script>
+<script type="text/javascript" crossorigin="anonymous" src="/static/js/vendor/face-api-1.7.12/face-api.js"></script>
 <script type="text/javascript" crossorigin="anonymous" src='/static/js/vendor/tesseract-js-2.1.1/tesseract.min.js'></script>
 <script type="text/javascript" crossorigin="anonymous" src='/static/js/vendor/js-base64-3.5.2/base64.min.js'></script>
-<script type="text/javascript" crossorigin="anonymous" src='/static/js/vendor/qr-code/v1ncc/qr.min.js'></script>
+<script type="text/javascript" crossorigin="anonymous" src='/static/js/vendor/qr-code/v1ncc/qr.min.js?v1'></script>
 
 <script type="text/javascript" crossorigin="anonymous" src="/static/js/app/avs.js?{{ cacheBuster }}"></script>
 <script type="text/javascript" crossorigin="anonymous" src="/static/js/app/avsFactory.js?{{ cacheBuster }}"></script>

@@ -18,7 +18,10 @@ namespace AvsFactory {
 
 				instance.event.on(
 					Config.EVENT_NAME_PREFIX + '.' + Avs.DataChannel.Webrtc.ON_VIDEO_PLAY,
-					(event: Avs.Event.Listener) => {
+					(event: Avs.Event.Listener, device: Avs.Helper.IVideoDevice) => {
+
+						let webcamUtility                                  = new Avs.Helper.WebcamUtility();
+						instance.entity.SelfieAgeDetection.videoDeviceData = webcamUtility.analyzeDevice(device);
 
 						instance.ui.SelfieAgeDetectionStatusLabel.setValue('Initializing detection libraries');
 

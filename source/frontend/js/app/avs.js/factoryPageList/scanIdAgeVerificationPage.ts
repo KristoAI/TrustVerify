@@ -58,6 +58,7 @@ namespace Avs {
 		ScanIdAgeVerificationConfirmationNoButton?: Avs.Ui.Library.ScanIdAgeVerificationConfirmationNoButton,
 		DocumentProcessingCanvasLoadingOverlayArea?: Avs.Ui.Library.DocumentProcessingCanvasLoadingOverlayArea,
 		ScanIdAgeVerificationFaceSimilarityArea?: Avs.Ui.Library.ScanIdAgeVerificationFaceSimilarityArea,
+		VideoMirrorButton?: Avs.Ui.Library.VideoMirrorButton,
 
 	}
 }

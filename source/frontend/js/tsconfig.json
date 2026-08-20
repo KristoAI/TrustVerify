@@ -1,8 +1,7 @@
 {
 	"compilerOptions": {
 		"ignoreDeprecations": "5.0",
-		"charset": "utf-8",
-		"target": "es3",
+		"target": "es5",
 		"removeComments": false,
 		"preserveConstEnums": false,
 		"noImplicitReturns": true,

@@ -1,8 +1,7 @@
-import {AvsEncryption}        from "../lib/encryption";
-import {AvsStoragePayload}    from "./payload";
-import axios, {AxiosResponse} from "axios";
-
-const uaParser = require('ua-parser-js');
+import axios, { AxiosResponse } from "axios";
+import uaParser from 'ua-parser-js';
+import { AvsEncryption } from "../lib/encryption";
+import { AvsStoragePayload } from "./payload";
 
 export class AvsStorageSession {
 
@@ -281,7 +280,7 @@ export interface ISessionListItem {
 	ipState: string,
 	websiteHostname: string,
 	verificationVersion: number,
-	deviceType: string,
+	deviceType?: string,
 	userAgent: string,
 	state: string,
 	stateInt: number,

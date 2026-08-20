@@ -41,6 +41,9 @@ namespace AvsFactory {
 					ipCountry = Application.forceIpCountry.toUpperCase();
 				}
 
+				instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+				instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
+
 				// get this dynamically later
 				let countryToTabVisibilityConfig: { [key:string]: { [key:number]: boolean } } = {
 					"DE": {
@@ -51,19 +54,25 @@ namespace AvsFactory {
 
 				if (typeof countryToTabVisibilityConfig[ipCountry] != "undefined") {
 
-					if (!countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER]) {
-						instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+					if (countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER]) {
+						instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
 					}
 
-					if (!countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER]) {
-						instance.ui.VerificationTypeTabs.hideTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
+					if (countryToTabVisibilityConfig[ipCountry][Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER]) {
+						instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
+					}
+
+				} else {
+
+					if (Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SELFIE_NAME)) {
+						instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SELFIE_NUMBER);
+					}
+
+					if (Config.VERIFICATION_TYPE_LIST.includes(Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID_NAME)) {
+						instance.ui.VerificationTypeTabs.showTab(Avs.Ui.Library.VerificationTypeTabs.TAB_SCAN_ID_NUMBER);
 					}
 
 				}
-
-				// handle also the selected tab together with the visible tabs dynamically
-				let defaultTab = instance.ui.VerificationTypeTabs.verificationTypeToTabNumber(Config.VERIFICATION_TYPE_DEFAULT);
-				instance.ui.VerificationTypeTabs.selectTab(defaultTab);
 
 				let termsWereAgreed = Avs.Helper.Common.getLocalStorageBooleanValue(Config.KEY_LOCAL_STORAGE_TERMS_AGREED);
 				if (termsWereAgreed === true) {

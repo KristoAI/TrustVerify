@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.load = void 0;
+exports.load = load;
+const config_1 = require("../config");
 const response_1 = require("../lib/response");
 const session_1 = require("../storage/session");
-const config_1 = require("../config");
 const ROUTE_ROOT = '/result';
 const MAX_TEST_DURATION = config_1.config.test.maxDuration;
 const DEVICE_LOCATION_VERIFICATION_INTERNAL = 0;
@@ -129,4 +129,3 @@ function load(app, storage) {
         return delta < MAX_TEST_DURATION;
     };
 }
-exports.load = load;
