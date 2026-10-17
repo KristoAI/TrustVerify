@@ -10,25 +10,6 @@ namespace AvsFactory {
 					return;
 				}
 
-				if (
-					instance.entity.SelfieAgeDetection.videoDeviceData != null &&
-					!instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual &&
-					instance.entity.SelfieAgeDetection.averageAge > 0
-				) {
-					instance.ui.ResultPageSuccessSelfieArea.setContent(
-						'<strong>' +
-						SelfieAgeDetectionPage.Method.getAgeAreaString(
-							'Final face average age',
-							instance.entity.SelfieAgeDetection.averageAge
-						) +
-						'</strong>'
-					);
-				}
-
-				if (instance.entity.ScanIdAgeVerification.lowestScanValue > 0) {
-					instance.ui.ResultPageSuccessScanIdArea.setContent('<strong>Final document extracted age: ' + instance.entity.ScanIdAgeVerification.lowestScanValue + '</strong>');
-				}
-
 				let token      = (<any>Application).token;
 				let successKey = Avs.Helper.Common.decodeBase64(token).successKey;
 

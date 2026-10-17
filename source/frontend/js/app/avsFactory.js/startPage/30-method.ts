@@ -267,7 +267,7 @@ namespace AvsFactory {
 
 				instance.ui.ErrorMessageQrTextArea.hide();
 
-				if (!Application.deviceInfo['os.mobile']) {
+				if (false) {
 
 					instance.ui.ErrorMessageQrTextArea.show();
 

@@ -1,0 +1,15 @@
+node_modules
+.git
+.env
+.env.*
+.local
+test-results
+script/tmp
+dist
+app
+source
+example
+examples
+wordpress
+tests
+script/gulpfile.js

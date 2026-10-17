@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TrustBunny synthetic browser checks</title></head><body>
+<h1>TrustBunny synthetic browser checks</h1>
+<p>Local test data only. No camera is used. The optional phone-result fixture submits a synthetic result only to this disposable test database.</p>
+<button id="ocr">Run real OCR fixtures</button> <button id="spatial-ocr">Run spatial DOB OCR fixture</button> <button id="mrz">Run real MRZ OCR fixture</button> <button id="models">Load models and detect a blank image</button> <button id="qr">Render a QR fixture</button>
+<pre id="status" role="status">Ready</pre><canvas id="fixture"></canvas>
+<button id="synthetic-phone" hidden>Submit synthetic phone outcome to local test session</button>
+<script src="/assets/vendor/face-api/face-api.js"></script><script src="/assets/vendor/tesseract/tesseract.min.js"></script><script src="/preview/fixtures.js" defer></script>
+</body></html>

@@ -99,7 +99,7 @@ namespace Avs {
 						errorObj.code = 6;
 					}
 
-					return errorObj;
+					return $.Deferred().reject(errorObj).promise();
 				});
 
 				(<any>promise).jqXHR = jqXHR;

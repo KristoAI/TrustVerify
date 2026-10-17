@@ -25,7 +25,7 @@ namespace AvsFactory {
 					idState                   : instance.entity.ScanIdAgeVerification.idState,
 					idType                    : instance.entity.ScanIdAgeVerification.idTypeString,
 				}).then(
-					() => {
+					(data: any) => { if (data.completionUrl) window.location.assign(data.completionUrl);
 					},
 					(error: any) => {
 						instance.ui.ResultPageFailReasonArea.setContent(error.code + ': Could not save your result');
@@ -40,7 +40,7 @@ namespace AvsFactory {
 
 				instance.ui.ResultPageFailQrArea.hide();
 
-				if (!Application.deviceInfo['os.mobile']) {
+				if (false) {
 
 					instance.ui.ResultPageFailQrArea.show();
 

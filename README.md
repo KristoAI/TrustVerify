@@ -1,119 +1,64 @@
-# TrustVerify.app - Age verification system
+# TrustBunny
 
-[TrustVerify.app](https://TrustVerify.app/) offers a simple, easy-to-use application for verifying age online.
-With just a few clicks, it allows to verify the age of the person who wishes to access certain sites restricted to minors.
+Public domain: **trustbunny.com**. The repository and internal service identifiers retain their original names for compatibility.
 
-Two methods of age verification are available : facial recognition (selfie) and ID documents verification (ID card, passport, or driver's license).
+Private browser age checks, reusable visitor passes, and site integrations.
 
-For the selfie verification, GO.cam utilizes the smartphone camera or computer webcam to assess the user's age through artificial intelligence. If the detected age is too close to the legal age, another verification method is suggested.
+TrustBunny is an Express application backed by Supabase Postgres. It provides a branded homepage, business dashboard, policy/branding settings, hashed site API keys, signed redirects, one-time result exchanges, durable signed webhooks, a session-status API, an embedded JavaScript gate, and optional visitor passkeys without email.
 
-### TrustVerify.app is certified 🏅
-
-The original fork team (Go.cam) is constantly working closely with regulators from many countries to certify the project (GO.cam).
-
-Authorities that already certified:
-
-* [Central Authority for the Supervision and Protection of Minors on the Internet in Germany](https://www.kjm-online.de/pressemitteilungen/altersverifikation-persona-gocam/)
-* [Age Check Certification Scheme](https://accscheme.com/registry/age-estimation/gsi-development-sas/)
-
-[ASACP](https://www.asacp.org/) recommends Go.cam as a solution for protecting minors online by guaranteeing secure access to adult content.
-
-## Environment Variables
-
-Copy the `.env.example` file and rename it to `.env` in the project's root directory. The service defaults to using port `3300` on `localhost`.
-
-```sh
-cp .env.example .env
-```
-
-## Install
-
-This project was developed using Nodejs v20, we recommend using a compatible version.
-
-Clone this repository and install the required packages by running on the root the of the project the following command:
-
-`npm install`
+Age estimation and document OCR run on the visitor's device. Images, dates of birth, exact ages, document text, and face descriptors are not accepted by the result API. Outcomes are explicitly **browser_asserted**: a modified browser can forge a claim. Passkeys protect reuse of a saved result; they do not independently prove age.
 
 ## Run
 
-After the installation of the packages you should be able to run the project in development or production mode.
-The only difference between them is the `watch` parameter (watches for any file changes on the backend and restart the nodejs process when a detection is made) which is enabled for the development version.
+Requires Node.js 24 or newer. The Docker runtime is pinned to a verified Node 24 image digest.
 
-To run the project in development mode run:
+```
+npm ci
+# Configure .env and provision Supabase; see docs/OPERATIONS.md.
+npm run build
+npm run startDev
+```
 
-`npm run startDev`
+Open `http://localhost:3300`. Production entry point: `npm run startProd`.
 
-To run the project in production mode run:
+## Documentation
 
-`npm run startProd`
+- [Independent core status](docs/REWORK_STATUS.md): implementation, validation and remaining release gates
+- [Document coverage](docs/DOCUMENT_COVERAGE.md): historical inventory and new-reader acceptance
+- [GPL replacement plan](docs/GPL_REPLACEMENT_PLAN.md) and [QR continuation](docs/QR_CONTINUATION_PLAN.md)
+- `/docs` in the application: integration guide
+- [Operations](docs/OPERATIONS.md): setup, credentials, workers, retention, deployment
+- [Cloud deployment status](docs/DEPLOYMENT_STATUS.md): hosted migrations, edge versions, and remaining configuration
+- [Protocol](docs/PROTOCOL.md): result semantics and integration contracts
+- [Product plan](docs/PRODUCT_PLAN.md): decisions and roadmap
+- [Original-system review](docs/SYSTEM_REVIEW.md): inherited architecture and findings
+- [Node reference client](examples/node-client/README.md): server-protected content and signed webhooks
+- [WordPress integration](wordpress/trustverify/README.md): embed plugin and scope
 
-By default the project will run on `http://localhost:3300`. Due to the fact that this project requires access to some features that are restricted to https (e.g. webcam access), we recommend you running it on `localhost` on your first run.
+## Verify
 
-## Example implementation
+```
+npm run build
+npm run typecheck
+npm test
+npm run audit:core
+TV_INTEGRATION_TEST=1 node --test tests/integration.test.mjs
+```
 
-By running this project you will be able to go through both types of verification flows: using a redirect or a iframe overlay.
+The live suite creates and deletes isolated records in the configured Supabase project. Native camera/document accuracy and device passkey UX require human acceptance testing.
 
-Additionally, we provide a standalone implementation of go.cam in various programming languages. Please check the `example` folder for more information about this.
+## Layout
 
-A MIT license alternative for the example implementation code can be found inside this repository: https://github.com/Godotcam/goCamOpenSourceExamples.
+- `server/`: active API, account/passkey flows, session protocol, webhook worker
+- `web/verification/`: independent browser camera, selfie, document and QR workflows
+- `web/`, `public/`: branded UI and public embed SDK
+- `vendor/verification/`: approved upstream assets, hashes and notices
+- `dist/assets/`: independently built assets served by the application
+- `dist/core-candidate/`: explicit runtime package generated by `npm run package:core`
+- `supabase/`: migrations and private store bridge
+- `source/frontend/`, `app/frontend/`: historical engine and compiled assets retained as migration evidence; excluded from the independent build, static routes and candidate package
+- `source/backend/`, `app/backend/`: original backend retained for provenance, not used by current start scripts
 
-## Project structure
+## License and attribution
 
-This project is using typescript for both frontend and backend (express js) scripts, sass for the styling part and twig for the template part.
-
-### Views
-
-The views folder is located under `app/frontend/views`.
-
-### Styling
-
-The sass folder is located under `source/frontend/css` and it is compiled and merged to `app/frontend/static/css/main.css`.
-
-### Backend scripts
-
-The backend scripts are located under `source/backend/app` and are compiled to `app/backend/`.
-
-### Frontend scripts
-
-The frontend scripts are located under `source/frontend/js/app` and are compiled and merged to `app/frontent/static/js/app`.
-
-### Build and run scripts
-
-The build and run scripts are located under `script/gulpfile.js`.
-
-## Develop
-
-If you wish to develop the project further you might find the following commands useful.
-
-### Build the whole project (frontend, backend and styling):
-
-`npm run build`
-
-### Build only the backend:
-
-`npm run buildJsBackend`
-
-### Build only the frontend:
-
-`npm run buildJsFrontend`
-
-### Build only the styling:
-
-`npm run buildCssFrontend`
-
-### Watch the file changes on all the project and automatically rebuild (frontend, backend and styling):
-
-`npm run watch`
-
-### Watch only the backend:
-
-`npm run watchJsBackend`
-
-### Watch only the frontend:
-
-`npm run watchJsFrontend`
-
-### Watch only the styling:
-
-`npm run watchCssFrontend`
-
+This working repository retains historical go.cam code by GoDotCam and the upstream [AGPL-3.0 license](LICENSE). The independent core candidate excludes that engine from its runtime, but the repository has not been relicensed and full document coverage has not been accepted. See [implementation status](docs/REWORK_STATUS.md) before release. TrustBunny branding does not imply upstream certifications or endorsements. Preserve applicable obligations for historical covered versions; vendor components and the separately packaged WordPress plugin keep their own licenses.

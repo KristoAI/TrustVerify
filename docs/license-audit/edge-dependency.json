@@ -1,0 +1,9 @@
+{
+  "name": "@supabase/supabase-js",
+  "version": "2.116.0",
+  "license": "MIT",
+  "npmIntegrity": "sha512-YyWmKXt2NspV9iO8FPnlswUFJIRnrLd3oTCb+3ZyYRuKZtBH0xCUDgnUqoyA0fGUxpM/UhfwDjYf/dht/9bp7g==",
+  "licenseURL": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/LICENSE",
+  "licenseSHA256": "334dd6820e2eaeab2064e7c59001b810566728a28a41a7c1dbf69bbee17d0936",
+  "scope": "Direct Edge dependency pinned; separate Deno transitive graph and deployed version remain outside root npm audit. Hosted deployment not performed."
+}

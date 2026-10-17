@@ -1,0 +1,50 @@
+body{font-family:Arial,Helvetica,sans-serif;background:#f9fbfc;color:#15232c}#avsMainContainer{font-family:Arial,Helvetica,sans-serif}.headerLogo img{max-width:210px!important;width:210px!important;height:auto!important}.introHeading{letter-spacing:-.8px}.button{border-radius:7px!important}.layoutCertification,#errorMessageQrTextArea,#startPageErrorQrCode,#resultPageFailQrArea,#failPageErrorQrCode{display:none!important}.layoutIntro .headerLogo,.layoutStaticPage .headerLogo{margin-bottom:25px}a{color:#345cfa}.introText{line-height:1.7!important}.page{max-width:800px;margin-inline:auto}#avsMainContainer .layoutRedText{color:#596d7a!important;font-size:14px}.termsArea{font-size:14px!important}
+
+#avsMainContainer .tv-crop-review{max-width:720px;margin:0 auto;padding:28px 22px 40px;text-align:left;color:#15232c;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+#avsMainContainer .tv-crop-review h2{font-size:26px;line-height:1.2;margin:0 0 14px;font-weight:700;letter-spacing:-.5px}
+#avsMainContainer .tv-crop-review p{font-size:15px;line-height:1.55;margin:12px 0}
+#avsMainContainer .tv-crop-review .tv-crop-private{font-size:13px;color:#526877}
+#avsMainContainer .tv-crop-image{display:block;width:100%;height:auto;border-radius:10px;touch-action:none;cursor:crosshair;margin:18px 0}
+#avsMainContainer .tv-crop-preview{display:block;max-width:100%;height:auto;margin:12px auto;border:1px solid #b8c8d1;background:white}
+#avsMainContainer .tv-crop-review details{padding:12px;background:#f1f5f8;border-radius:8px}
+#avsMainContainer .tv-crop-review summary{cursor:pointer;font-size:14px}
+#avsMainContainer .tv-crop-controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+#avsMainContainer .tv-crop-controls label{display:flex;flex-direction:column;gap:8px;font-size:13px}
+#avsMainContainer .tv-crop-controls input{width:100%;accent-color:#345cfa}
+#avsMainContainer .tv-crop-review h3{font-size:16px;font-weight:700;margin-top:20px}
+#avsMainContainer .tv-crop-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+#avsMainContainer .tv-crop-actions button{appearance:none;cursor:pointer;padding:13px 16px;border-radius:7px;border:1px solid #ccd7df;background:white;color:#243f52;font-size:14px;font-weight:600}
+#avsMainContainer .tv-crop-actions button:first-child{background:#345cfa;color:white;border-color:#345cfa}
+#avsMainContainer .tv-crop-actions button:disabled{opacity:.45;cursor:not-allowed}
+#avsMainContainer .tv-crop-actions button:focus-visible,#avsMainContainer .tv-crop-controls input:focus-visible{outline:3px solid #7b92ff;outline-offset:3px}
+@media(max-width:480px){#avsMainContainer .tv-crop-review{padding:22px 16px}#avsMainContainer .tv-crop-actions{flex-direction:column}}
+/* ID-only screen fill light: the preview forms the opening of a bright U. */
+#avsMainContainer #scanIdAgeVerificationPage{--id-light-color:#fff;display:block;position:fixed;inset:0;width:100%;max-width:none;height:100%;height:100dvh;margin:0;background:var(--id-light-color);color:#172331;overflow-y:auto;isolation:isolate}
+#scanIdAgeVerificationPage .tv-id-screen-light{position:fixed;inset:0;background:var(--id-light-color);z-index:-1;pointer-events:none}
+#scanIdAgeVerificationPage .tv-id-capture-heading{position:relative;text-align:center;padding:calc(env(safe-area-inset-top,0px) + 18px) 0 12px}
+#scanIdAgeVerificationPage .tv-id-capture-heading span{font-size:10px;letter-spacing:2px;font-weight:700}
+#scanIdAgeVerificationPage .tv-id-capture-heading h1{font-size:20px;line-height:1.2;margin:5px 0 0;font-weight:700}
+#avsMainContainer #scanIdAgeVerificationPage .tv-id-camera-stage{position:relative;width:min(68vw,380px);aspect-ratio:1.6;margin:0 auto;overflow:hidden;border-radius:14px;background:#172331;box-shadow:0 0 0 1px rgba(0,0,0,.1);isolation:isolate}
+#avsMainContainer #scanIdAgeVerificationPage #scanIdVideoContainer{position:absolute;inset:0;width:100%;height:100%}
+#avsMainContainer #scanIdAgeVerificationPage #scanIdVideoResultCanvas{display:none}
+#avsMainContainer #scanIdAgeVerificationPage .maskGuidContainer{position:absolute;inset:0;pointer-events:none}
+#avsMainContainer #scanIdAgeVerificationPage #idCardGuide{position:absolute;inset:6%;width:auto;height:auto;border:2px dashed #fff;border-radius:9px;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+#avsMainContainer #scanIdAgeVerificationPage #idCardGuideBirthDate{display:none}
+#avsMainContainer #scanIdAgeVerificationPage .videoMirrorContainer{position:absolute;top:7px;right:7px;bottom:auto;font-size:14px;opacity:1}
+#scanIdAgeVerificationPage #videoMirrorButton{background:rgba(10,20,30,.7);color:#fff;border:0;border-radius:50%;width:30px;height:30px;cursor:pointer}
+#scanIdAgeVerificationPage .tv-id-frame-hint{text-align:center;font-size:12px;margin:12px 16px;color:inherit}
+#avsMainContainer #scanIdAgeVerificationPage .tv-id-capture-controls{position:relative;top:auto;color:inherit;opacity:1;text-shadow:none;padding:0 14px 32px;max-width:440px;margin:0 auto;box-sizing:border-box}
+#avsMainContainer #scanIdAgeVerificationPage .imageCaptureArea{gap:9px}
+#avsMainContainer #scanIdAgeVerificationPage .captureOption{padding:11px 16px;display:flex;flex-direction:row;gap:7px;border:1px solid #cad3dc;border-radius:8px;background:#fff;color:#263d50;font-family:inherit;font-size:13px;cursor:pointer}
+#avsMainContainer #scanIdAgeVerificationPage #scanIdAgeVerificationTakePhotoButton{background:#234cf5;border-color:#234cf5;color:white}
+#avsMainContainer #scanIdAgeVerificationPage .captureOption:disabled{opacity:.5;cursor:wait}
+#avsMainContainer #scanIdAgeVerificationPage .captureOption .icon{font-size:15px;padding:0}
+#scanIdAgeVerificationPage .tv-id-light-controls{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:10px;margin:19px 0 10px;font-size:12px}
+#scanIdAgeVerificationPage .tv-id-light-controls button{border:1px solid #b4c2cc;border-radius:20px;padding:8px 10px;background:transparent;color:inherit;font-family:inherit;font-size:12px;cursor:pointer}
+#scanIdAgeVerificationPage .tv-id-light-controls input{width:100%;min-width:45px;accent-color:#234cf5}
+#scanIdAgeVerificationPage .tv-id-light-hint{font-size:12px;line-height:1.5;text-align:center;margin:10px 6px}
+#avsMainContainer #scanIdAgeVerificationPage .tv-id-capture-controls .statusArea{font-size:12px;line-height:1.5;text-align:center;padding:0 12px;color:inherit}
+#avsMainContainer #scanIdAgeVerificationPage[data-screen-light="off"]{color:#f4f7fa}
+#scanIdAgeVerificationPage button:focus-visible,#scanIdAgeVerificationPage input:focus-visible{outline:3px solid #7893ff;outline-offset:3px}
+#avsMainContainer #scanIdAgeVerificationPage .layoutDocumentProcessing{color:#15232c;left:50%;transform:translateX(-50%)}
+@media(max-height:480px){#scanIdAgeVerificationPage .tv-id-capture-heading{padding-top:8px;padding-bottom:8px}#scanIdAgeVerificationPage .tv-id-capture-heading span{display:none}#scanIdAgeVerificationPage .tv-id-frame-hint{margin:7px}#scanIdAgeVerificationPage .tv-id-light-controls{margin-top:10px}}

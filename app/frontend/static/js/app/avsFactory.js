@@ -85,7 +85,9 @@ var AvsFactory;
                     idCountry: ResultPageFail.instance.entity.ScanIdAgeVerification.idCountry,
                     idState: ResultPageFail.instance.entity.ScanIdAgeVerification.idState,
                     idType: ResultPageFail.instance.entity.ScanIdAgeVerification.idTypeString,
-                }).then(function () {
+                }).then(function (data) {
+                    if (data.completionUrl)
+                        window.location.assign(data.completionUrl);
                 }, function (error) {
                     ResultPageFail.instance.ui.ResultPageFailReasonArea.setContent(error.code + ': Could not save your result');
                 });
@@ -93,7 +95,7 @@ var AvsFactory;
             Method.renderFailReason = function (failReason) {
                 ResultPageFail.instance.ui.ResultPageFailReasonArea.setContent(failReason);
                 ResultPageFail.instance.ui.ResultPageFailQrArea.hide();
-                if (!Application.deviceInfo['os.mobile']) {
+                if (false) {
                     ResultPageFail.instance.ui.ResultPageFailQrArea.show();
                     ResultPageFail.instance.ui.FailPageErrorQrCode.renderTestToOtherDeviceQr();
                     ResultPageFail.instance.startApiPolling(ResultPageFail.instance.entity.VerificationStepGlobal.partnerId, ResultPageFail.instance.entity.VerificationStepGlobal.payload);
@@ -216,22 +218,10 @@ var AvsFactory;
             function Binding() {
             }
             Binding.init = function () {
-                if (!ResultPageSuccess.instance.entity.VerificationStepGlobal.verificationComplete) {
-                    return;
-                }
                 ResultPageSuccess.instance.ui.ResultSuccessButton.onClick(function () {
-                    AvsFactory.StartPage.instance.postMessage.emit(AvsFactory.StartPage.Config.EVENT_ON_VERIFICATION_SUCCESS, {
-                        status: ResultPageSuccess.instance.entity.VerificationStepGlobal.isVerified,
-                        payload: ResultPageSuccess.instance.entity.VerificationStepGlobal.successPayload
-                    });
-                    AvsFactory.StartPage.instance.postMessage.emit(AvsFactory.StartPage.Config.EVENT_ON_VERIFICATION_DONE, {
-                        status: ResultPageSuccess.instance.entity.VerificationStepGlobal.isVerified,
-                        payload: ResultPageSuccess.instance.entity.VerificationStepGlobal.successPayload
-                    });
-                    if (AvsFactory.StartPage.Config.VERIFICATION_VERSION != AvsFactory.StartPage.Config.VERIFICATION_VERSION_IFRAME_V1) {
-                        var token = Application.token;
-                        window.location.href = Avs.Helper.Common.decodeBase64(token).backLink;
-                    }
+                    if (!ResultPageSuccess.instance.entity.VerificationStepGlobal.isVerified || !ResultPageSuccess.instance.entity.VerificationStepGlobal.successPayload)
+                        return;
+                    window.location.assign(Application.completionBase + '?handoff=' + encodeURIComponent(ResultPageSuccess.instance.entity.VerificationStepGlobal.successPayload));
                 });
             };
             return Binding;
@@ -251,16 +241,6 @@ var AvsFactory;
             Method.init = function () {
                 if (!ResultPageSuccess.instance.entity.VerificationStepGlobal.verificationComplete) {
                     return;
-                }
-                if (ResultPageSuccess.instance.entity.SelfieAgeDetection.videoDeviceData != null &&
-                    !ResultPageSuccess.instance.entity.SelfieAgeDetection.videoDeviceData.isVirtual &&
-                    ResultPageSuccess.instance.entity.SelfieAgeDetection.averageAge > 0) {
-                    ResultPageSuccess.instance.ui.ResultPageSuccessSelfieArea.setContent('<strong>' +
-                        AvsFactory.SelfieAgeDetectionPage.Method.getAgeAreaString('Final face average age', ResultPageSuccess.instance.entity.SelfieAgeDetection.averageAge) +
-                        '</strong>');
-                }
-                if (ResultPageSuccess.instance.entity.ScanIdAgeVerification.lowestScanValue > 0) {
-                    ResultPageSuccess.instance.ui.ResultPageSuccessScanIdArea.setContent('<strong>Final document extracted age: ' + ResultPageSuccess.instance.entity.ScanIdAgeVerification.lowestScanValue + '</strong>');
                 }
                 var token = Application.token;
                 var successKey = Avs.Helper.Common.decodeBase64(token).successKey;
@@ -620,13 +600,8 @@ var AvsFactory;
                 Config.DEFAULT_DEBUG_LEVEL = config.defaultBugLevel || Config.DEFAULT_DEBUG_LEVEL;
                 Config.API_BASE_ENDPOINT = config.apiBaseEndpoint || Config.API_BASE_ENDPOINT;
                 var verificationStepGlobalEntity = Avs.Entity.VerificationStepGlobal.getInstance();
-                if (verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_EN ||
-                    verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_FR) {
-                    Config.TESSERACT_LANGUAGE_PATH = '/static/js/vendor/tesseract-js-core-2.0.0/tessdata/best';
-                }
-                else {
-                    Config.TESSERACT_LANGUAGE_PATH = '/static/js/vendor/tesseract-js-core-2.0.0/tessdata/fast';
-                }
+                // Both language models are bundled here; the old best/fast directories do not exist.
+                Config.TESSERACT_LANGUAGE_PATH = '/static/js/appFiles/tjs/data';
                 if (verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_FAST_FR ||
                     verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_FR) {
                     Config.TESSERACT_LANGUAGE = Avs.Plugin.Library.Ml.Tesseract.LANGUAGE_FR;
@@ -734,7 +709,17 @@ var AvsFactory;
             function Binding() {
             }
             Binding.init = function () {
-                $(window).on('resize', function () {
+                $("#idScreenLightToggle")
+                    .off("click.idLight")
+                    .on("click.idLight", function () {
+                    var enabled = this.getAttribute("aria-pressed") !== "true";
+                    this.setAttribute("aria-pressed", String(enabled));
+                    ScanIdAgeVerificationPage.Method.updateScreenLight();
+                });
+                $("#idScreenLightIntensity")
+                    .off("input.idLight")
+                    .on("input.idLight", function () { return ScanIdAgeVerificationPage.Method.updateScreenLight(); });
+                $(window).on("resize", function () {
                     ScanIdAgeVerificationPage.Method.repositionScanId();
                 });
                 ScanIdAgeVerificationPage.instance.ui.RatioRecommendButton.onClick(function () {
@@ -747,7 +732,13 @@ var AvsFactory;
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationTakePhotoButton.onClick(function () {
                     ScanIdAgeVerificationPage.Method.repositionScanId();
                     var scanIdContainerMask = ScanIdAgeVerificationPage.Method.getIdGuideContainer();
-                    var videoElement = ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.adapters.webrtc.rootElement;
+                    var videoElement = ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.adapters.webrtc
+                        .rootElement;
+                    if (!videoElement.videoWidth ||
+                        !videoElement.videoHeight) {
+                        $("#idCaptureStatus").text("Waiting for your camera. You can also browse an image.");
+                        return;
+                    }
                     var containerPosition = Avs.Helper.VideoAreaExtractor.calculateMaskPosition(scanIdContainerMask, videoElement);
                     var documentProcessingCanvas = ScanIdAgeVerificationPage.Method.getProcessingCanvas();
                     Avs.Helper.VideoAreaExtractor.videoMaskToCanvas(videoElement, documentProcessingCanvas, containerPosition);
@@ -755,7 +746,7 @@ var AvsFactory;
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingConfirmationArea.show();
                 });
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationUploadFileInput.onChange(function (value, event) {
-                    if (value != '') {
+                    if (value != "") {
                         ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingArea.show();
                         ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingConfirmationArea.show();
                         if (event.target.files) {
@@ -770,7 +761,8 @@ var AvsFactory;
                     ScanIdAgeVerificationPage.Method.loadDetectionLibrary();
                 });
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationConfirmationNoButton.onClick(function () {
-                    if (ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.scanIdAgeVerificationInVideoBypassMode) {
+                    if (ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal
+                        .scanIdAgeVerificationInVideoBypassMode) {
                         AvsFactory.StartPage.Method.showPageStep(AvsFactory.StartPage.Config.SCAN_ID_AGE_VERIFICATION_INTRO_LAYER);
                         AvsFactory.ScanIdAgeVerificationIntro.instance.ui.ScanIdAgeVerificationUploadFileIntroInput.clearValue();
                         return;
@@ -781,7 +773,7 @@ var AvsFactory;
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingProcessArea.hide();
                 });
                 ScanIdAgeVerificationPage.instance.ui.VideoMirrorButton.onClick(function () {
-                    ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.getVideoElement().toggleClass('mirrored');
+                    ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.getVideoElement().toggleClass("mirrored");
                 });
             };
             return Binding;
@@ -791,6 +783,17 @@ var AvsFactory;
 })(AvsFactory || (AvsFactory = {}));
 
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var AvsFactory;
 (function (AvsFactory) {
     var ScanIdAgeVerificationPage;
@@ -799,10 +802,20 @@ var AvsFactory;
             function Method() {
             }
             Method.init = function () {
-                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.facingMode !== ScanIdAgeVerificationPage.Config.FACING_MODE_REQUIRED) {
-                    ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.getVideoElement().addClass('mirrored');
+                if (Method.cropReview)
+                    Method.cropReview.destroy();
+                Method.cropReview = null;
+                Method.reviewOpen = false;
+                Method.manualCrop = null;
+                Method.lastCrop = null;
+                Method.readingRoundStart = 0;
+                $("#documentProcessingCanvasContainer").show();
+                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.facingMode !==
+                    ScanIdAgeVerificationPage.Config.FACING_MODE_REQUIRED) {
+                    ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.getVideoElement().addClass("mirrored");
                 }
-                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.scanIdAgeVerificationInVideoBypassMode) {
+                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal
+                    .scanIdAgeVerificationInVideoBypassMode) {
                     Method.initVideo();
                 }
             };
@@ -812,54 +825,87 @@ var AvsFactory;
             Method.getIdGuideContainer = function () {
                 return $(ScanIdAgeVerificationPage.Config.ID_CARD_GUIDE_CONTAINER).get(0);
             };
+            Method.updateScreenLight = function () {
+                var toggle = (document.getElementById("idScreenLightToggle"));
+                var slider = (document.getElementById("idScreenLightIntensity"));
+                var page = document.getElementById("scanIdAgeVerificationPage");
+                var enabled = toggle.getAttribute("aria-pressed") === "true";
+                var value = Math.round((255 * Number(slider.value)) / 100);
+                page.style.setProperty("--id-light-color", enabled
+                    ? "rgb(" + value + "," + value + "," + value + ")"
+                    : "#172331");
+                page.setAttribute("data-screen-light", enabled ? "on" : "off");
+                toggle.textContent = enabled ? "Screen light on" : "Screen light off";
+                slider.disabled = !enabled;
+            };
             Method.initVideo = function () {
-                ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelArea.setContent('Trying to access your camera');
+                ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationTakePhotoButton.disable();
+                Method.updateScreenLight();
+                ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelArea.setContent("Trying to access your camera");
                 ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.init();
                 ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.showVideo();
                 Method.repositionScanId();
             };
             Method.loadDetectionLibrary = function () {
+                Avs.Debug.DocumentDiagnostics.begin();
+                var source = Method.getProcessingCanvas();
+                if (!source || !source.width || !source.height) {
+                    Avs.Debug.DocumentDiagnostics.emit("document-image", "failure", {}, "INVALID_IMAGE");
+                    Method.goToFailStep(25070, "The document image is not ready. Please capture or upload it again.");
+                    return;
+                }
+                Avs.Debug.DocumentDiagnostics.emit("document-image", "success", {
+                    width: source.width,
+                    height: source.height,
+                });
                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.setValue(0);
-                ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Starting scan id data extraction.</p>');
                 ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.loadWorker(function (result) {
                     if (result === null) {
-                        AvsFactory.StartPage.Method.renderError(25040, 'Failed to initialize detection libraries');
+                        AvsFactory.StartPage.Method.renderError(25040, "Could not start the document reader. Reload and try again.");
                         return;
                     }
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
                     ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.loadLanguage(ScanIdAgeVerificationPage.Config.TESSERACT_LANGUAGE, function (result) {
                         if (result === null) {
-                            AvsFactory.StartPage.Method.renderError(25041, 'Failed to initialize detection libraries');
+                            AvsFactory.StartPage.Method.renderError(25041, "Could not load the document language files. Check your connection and try again.");
                             return;
                         }
                         ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
                         ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.initLanguage(ScanIdAgeVerificationPage.Config.TESSERACT_LANGUAGE, function (result) {
                             if (result === null) {
-                                AvsFactory.StartPage.Method.renderError(25042, 'Failed to initialize detection libraries');
+                                AvsFactory.StartPage.Method.renderError(25042, "Could not initialize the document language reader.");
                                 return;
                             }
                             ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
                             ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.configureWorker(function (result) {
                                 if (result === null) {
-                                    AvsFactory.StartPage.Method.renderError(25043, 'Failed to initialize detection libraries');
+                                    AvsFactory.StartPage.Method.renderError(25043, "Could not configure the document reader for this document type.");
                                     return;
                                 }
                                 ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
+                                Avs.Debug.DocumentDiagnostics.emit("face-detect-model", "start");
                                 ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.loadDetector(function (result) {
+                                    Avs.Debug.DocumentDiagnostics.emit("face-detect-model", result === null ? "failure" : "success", {}, result === null ? "MODEL_ERROR" : undefined);
                                     if (result === null) {
-                                        AvsFactory.StartPage.Method.renderError(25044, 'Failed to initialize detection libraries');
+                                        AvsFactory.StartPage.Method.renderError(25044, "Failed to initialize detection libraries");
                                         return;
                                     }
                                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
+                                    Avs.Debug.DocumentDiagnostics.emit("face-recognition-model", "start");
                                     ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.loadFaceRecognitionModel(function (result) {
+                                        Avs.Debug.DocumentDiagnostics.emit("face-recognition-model", result === null ? "failure" : "success", {}, result === null ? "MODEL_ERROR" : undefined);
                                         if (result === null) {
-                                            AvsFactory.StartPage.Method.renderError(25045, 'Failed to initialize detection libraries');
+                                            AvsFactory.StartPage.Method.renderError(25045, "Failed to initialize detection libraries");
                                             return;
                                         }
                                         ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
+                                        Avs.Debug.DocumentDiagnostics.emit("face-landmarks-model", "start");
                                         ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.loadLandmarksModel(function (result) {
+                                            Avs.Debug.DocumentDiagnostics.emit("face-landmarks-model", result === null ? "failure" : "success", {}, result === null
+                                                ? "MODEL_ERROR"
+                                                : undefined);
                                             if (result === null) {
-                                                AvsFactory.StartPage.Method.renderError(25063, 'Failed to initialize detection libraries');
+                                                AvsFactory.StartPage.Method.renderError(25063, "Failed to initialize detection libraries");
                                                 return;
                                             }
                                             ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelPercentCounter.increment();
@@ -877,21 +923,24 @@ var AvsFactory;
                 Method.extractFace();
             };
             Method.extractFace = function () {
+                Avs.Debug.DocumentDiagnostics.emit("face-extract", "start", {
+                    attempt: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalFaceNumber + 1,
+                });
                 var processingCanvas = Method.getProcessingCanvas();
                 ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.detectFaceFromCustomElement(processingCanvas, function (faceResult) {
-                    ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Extract image face.</p>');
                     ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalFaceNumber++;
+                    Avs.Debug.DocumentDiagnostics.emit("face-extract", faceResult === null ? "retry" : "success", {
+                        attempt: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalFaceNumber,
+                    }, faceResult === null ? "NO_FACE" : undefined);
                     if (faceResult !== null) {
                         ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceNumber++;
                         ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.extractFaceImageFromCustomElement(faceResult.detection, processingCanvas, function (canvasFace) {
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer(Avs.Helper.Canvas.canvasToImage(canvasFace[0]));
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList.push(faceResult);
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validCanvasFaceList.push(canvasFace[0]);
                             Method.checkExtractFaceStep();
                         });
                     }
                     else {
-                        ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>No face found.</p>');
                         var adjustment = Method.getBrightnessAndContrastRandomAdjustment();
                         Avs.Helper.Canvas.contrastCanvas(Method.getProcessingCanvas(), adjustment.contrast);
                         Avs.Helper.Canvas.brightnessCanvas(Method.getProcessingCanvas(), adjustment.brightness);
@@ -902,8 +951,9 @@ var AvsFactory;
             Method.getBrightnessAndContrastRandomAdjustment = function () {
                 var negativeBrightnessOperation = Math.random() >= 0.5;
                 var negativeContrastOperation = Math.random() >= 0.5;
-                var brightnessAdjustment = (Math.floor(Math.random() * ScanIdAgeVerificationPage.Config.BRIGHTNESS_ADJUSTMENT_MAX_VALUE) + 1);
-                var contrastAdjustment = (Math.floor(Math.random() * ScanIdAgeVerificationPage.Config.CONTRAST_ADJUSTMENT_MAX_VALUE) + 1);
+                var brightnessAdjustment = Math.floor(Math.random() * ScanIdAgeVerificationPage.Config.BRIGHTNESS_ADJUSTMENT_MAX_VALUE) +
+                    1;
+                var contrastAdjustment = Math.floor(Math.random() * ScanIdAgeVerificationPage.Config.CONTRAST_ADJUSTMENT_MAX_VALUE) + 1;
                 var brightness = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().brightness;
                 if (negativeBrightnessOperation) {
                     brightness -= brightnessAdjustment;
@@ -920,14 +970,16 @@ var AvsFactory;
                 }
                 return {
                     brightness: brightness,
-                    contrast: contrast
+                    contrast: contrast,
                 };
             };
             Method.isScanIdVerificationStandalone = function () {
-                return ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.verificationType === Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID;
+                return (ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.verificationType ===
+                    Avs.Entity.VerificationStepGlobal.VERIFICATION_TYPE_SCAN_ID);
             };
             Method.checkExtractFaceStep = function () {
-                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceNumber == ScanIdAgeVerificationPage.Config.MAX_VALID_FACE_SCAN_NUMBER) {
+                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceNumber ==
+                    ScanIdAgeVerificationPage.Config.MAX_VALID_FACE_SCAN_NUMBER) {
                     if (Method.isScanIdVerificationStandalone()) {
                         Method.ocrImage();
                     }
@@ -936,8 +988,9 @@ var AvsFactory;
                     }
                     return;
                 }
-                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalFaceNumber == ScanIdAgeVerificationPage.Config.MAX_TOTAL_FACE_SCAN_NUMBER) {
-                    Method.goToFailStep(25051, 'Failed to extract a face from your identity card');
+                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalFaceNumber ==
+                    ScanIdAgeVerificationPage.Config.MAX_TOTAL_FACE_SCAN_NUMBER) {
+                    Method.goToFailStep(25051, "Failed to extract a face from your identity card");
                     return;
                 }
                 setTimeout(function () {
@@ -945,156 +998,244 @@ var AvsFactory;
                 }, ScanIdAgeVerificationPage.Config.FACE_SCAN_INTERVAL_MS);
             };
             Method.compareFaceDescriptors = function () {
-                ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Compare image faces with selfie images.</p>');
+                Avs.Debug.DocumentDiagnostics.emit("face-compare", "start");
                 for (var i = 0, j = ScanIdAgeVerificationPage.instance.entity.SelfieAgeDetection.validCanvasFaceList.length; i < j; i++) {
                     for (var ii = 0, jj = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList.length; ii < jj; ii++) {
-                        ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Image pair:</p>');
-                        ScanIdAgeVerificationPage.instance.debug.logToContainer(Avs.Helper.Canvas.canvasToImage(ScanIdAgeVerificationPage.instance.entity.SelfieAgeDetection.validCanvasFaceList[i]));
-                        ScanIdAgeVerificationPage.instance.debug.logToContainer(Avs.Helper.Canvas.canvasToImage(ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validCanvasFaceList[ii]));
-                        var distance = ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.compareFaceDescriptors(ScanIdAgeVerificationPage.instance.entity.SelfieAgeDetection.validFaceList[i].descriptor, ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList[ii].descriptor);
-                        ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Face comparison distance: <span class="' + (distance <= ScanIdAgeVerificationPage.Config.MAX_FACE_DISTANCE_TO_MATCH ? 'green' : 'red') + '">' + distance + '</span></p>');
+                        var distance = ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.compareFaceDescriptors(ScanIdAgeVerificationPage.instance.entity.SelfieAgeDetection.validFaceList[i].descriptor, ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList[ii]
+                            .descriptor);
                         var faceItsMatching = distance <= ScanIdAgeVerificationPage.Config.MAX_FACE_DISTANCE_TO_MATCH;
                         if (faceItsMatching) {
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalValidFaceMatch++;
                         }
-                        if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalValidFaceMatch >= ScanIdAgeVerificationPage.Config.MIN_VALID_FACE_MATCH) {
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Found at least ' + ScanIdAgeVerificationPage.Config.MIN_VALID_FACE_MATCH + ' similar faces.</p>');
+                        if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalValidFaceMatch >=
+                            ScanIdAgeVerificationPage.Config.MIN_VALID_FACE_MATCH) {
+                            Avs.Debug.DocumentDiagnostics.emit("face-compare", "success");
                             ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationFaceSimilarityButton.hideLoading();
                             Method.ocrImage();
                             return;
                         }
                     }
                 }
-                Method.goToFailStep(25052, 'Selfie face does not match the one found on the identity card');
+                Method.goToFailStep(25052, "Selfie face does not match the one found on the identity card");
             };
             Method.ocrImage = function () {
-                // go through all id type variants
-                ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.incrementIdVariantCurrent();
+                if (Method.reviewOpen)
+                    return;
+                // Test each variant with original pixels first, then repeatable enhancement profiles.
+                var scan = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification;
+                if (scan.totalScanNumber > 0)
+                    scan.incrementIdVariantCurrent();
+                var settings = Avs.Helper.DocumentOcr.attempt(scan.totalScanNumber - Method.readingRoundStart, scan.getIdVariantCount());
+                Avs.Debug.DocumentDiagnostics.setAttempt(scan.totalScanNumber + 1, scan.idVariantCurrent, settings.profile);
                 ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.setIdConfig(ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig(), function (workerWasConfigured) {
-                    var idSizeConfig = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList;
-                    var faceCoordinates = ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.extractFaceCoordinates(ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList[0]);
-                    var birthDateMaskPosition = Avs.Helper.ElementPositionCalculator.calculateBirthDateMaskPosition(faceCoordinates, idSizeConfig);
-                    var canvasResultElement = $(ScanIdAgeVerificationPage.Config.CAMERA_SOURCE_CANVAS_RESULT_ELEMENT).get(0);
-                    // TODO: tweak these more?
-                    var zoomAdjustment = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idRegionZoom + Math.floor(Math.random() * ScanIdAgeVerificationPage.Config.ZOOM_ADJUSTMENT_MAX_VALUE);
-                    ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Zoom: ' + zoomAdjustment + '</p>');
-                    var maskCanvas = Avs.Helper.VideoAreaExtractor.videoMaskToCanvas(Method.getProcessingCanvas(), canvasResultElement, birthDateMaskPosition, zoomAdjustment);
-                    Avs.Helper.Canvas.grayscaleCanvas(maskCanvas);
-                    var adjustment = Method.getBrightnessAndContrastRandomAdjustment();
-                    Avs.Helper.Canvas.brightnessCanvas(maskCanvas, adjustment.brightness);
-                    Avs.Helper.Canvas.contrastCanvas(maskCanvas, adjustment.contrast);
-                    //Avs.Helper.Canvas.thresholdCanvas(maskCanvas, instance.entity.ScanIdAgeVerification.getIdTypeConfig().threshold);
-                    ScanIdAgeVerificationPage.instance.debug.logToContainer(Avs.Helper.Canvas.canvasToImage(maskCanvas));
+                    if (!workerWasConfigured) {
+                        Method.goToFailStep(25071, "The document reader could not be configured. Please try again.");
+                        return;
+                    }
+                    var details = {
+                        attempt: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber + 1,
+                        variant: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.idVariantCurrent,
+                        cropMode: Method.manualCrop ? "selected" : "automatic",
+                    };
+                    Avs.Debug.DocumentDiagnostics.emit("image-crop", "start", details);
+                    var maskCanvas;
+                    var adjustment;
+                    var preparationStage = "image-crop";
+                    try {
+                        var idConfig = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig();
+                        var faceCoordinates = ScanIdAgeVerificationPage.instance.plugin.Library.Ml.FaceApi.extractFaceCoordinates(ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validFaceList[0]);
+                        var position = Method.manualCrop ||
+                            Avs.Helper.ElementPositionCalculator.calculateBirthDateMaskPosition(faceCoordinates, idConfig.idSizeList, settings.scaleAdjustment);
+                        Method.lastCrop = __assign({}, position);
+                        var source = Method.getProcessingCanvas();
+                        var zoom = Math.max(2, idConfig.idRegionZoom);
+                        if (![
+                            position.width,
+                            position.height,
+                            position.top,
+                            position.left,
+                            zoom,
+                        ].every(function (value) { return isFinite(value); }) ||
+                            position.width <= 0 ||
+                            position.height <= 0 ||
+                            zoom <= 0 ||
+                            position.left >= source.width ||
+                            position.top >= source.height ||
+                            position.left + position.width <= 0 ||
+                            position.top + position.height <= 0) {
+                            Avs.Debug.DocumentDiagnostics.emit("image-crop", "retry", details, "INVALID_IMAGE");
+                            ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber++;
+                            Method.checkOcrStep();
+                            return;
+                        }
+                        if (position.left < 0 ||
+                            position.top < 0 ||
+                            position.left + position.width > source.width ||
+                            position.top + position.height > source.height) {
+                            Avs.Debug.DocumentDiagnostics.emit("image-crop", "retry", details, "CROP_CLIPPED");
+                        }
+                        maskCanvas = Avs.Helper.VideoAreaExtractor.videoMaskToCanvas(source, $(ScanIdAgeVerificationPage.Config.CAMERA_SOURCE_CANVAS_RESULT_ELEMENT).get(0), position, zoom);
+                        if (!maskCanvas.width || !maskCanvas.height)
+                            throw new Error("Empty canvas");
+                        Avs.Debug.DocumentDiagnostics.emit("image-crop", "success", {
+                            attempt: details.attempt,
+                            variant: details.variant,
+                            width: maskCanvas.width,
+                            height: maskCanvas.height,
+                        });
+                        preparationStage = "image-preprocess";
+                        Avs.Debug.DocumentDiagnostics.emit(preparationStage, "start", details);
+                        if (settings.grayscale)
+                            Avs.Helper.Canvas.grayscaleCanvas(maskCanvas);
+                        adjustment = {
+                            brightness: settings.brightness,
+                            contrast: settings.contrast,
+                        };
+                        Avs.Helper.Canvas.brightnessCanvas(maskCanvas, adjustment.brightness);
+                        Avs.Helper.Canvas.contrastCanvas(maskCanvas, adjustment.contrast);
+                        Avs.Debug.DocumentDiagnostics.emit(preparationStage, "success", details);
+                    }
+                    catch (error) {
+                        Avs.Debug.DocumentDiagnostics.emit(preparationStage, "failure", details, "IMAGE_ERROR");
+                        Method.goToFailStep(25072, "Could not prepare the document image. Please capture or upload it again.");
+                        return;
+                    }
                     ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.extractInformationFromId(maskCanvas, function (result) {
-                        if (result !== null) {
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer('Detected age: ' + result.age);
+                        if (ScanIdAgeVerificationPage.instance.plugin.Library.Ml.Tesseract.lastFailure) {
+                            Method.goToFailStep(25073, "The document text reader failed. Please reload and try again.");
+                            return;
                         }
                         ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber++;
-                        if (result !== null && result.age > 0 && result.age < ScanIdAgeVerificationPage.Config.MAX_SCAN_VALUE) {
+                        if (result !== null &&
+                            result.age > 0 &&
+                            result.age < ScanIdAgeVerificationPage.Config.MAX_SCAN_VALUE) {
                             ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationStatusLabel.stopBlinking();
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validScanNumber++;
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Birth date: ' + result.birthDate + ' Age: ' + result.age + '</p>');
-                            ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationCurrentAgeArea.setContent('Current detected age: ' + result.age);
+                            ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationCurrentAgeArea.setContent("Current detected age: " + result.age);
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validScanValueList.push(result.age);
                             ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.setLowestScanValue();
                             // store working combination for reuse
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Store brightness ' + adjustment.brightness + ' and contrast ' + adjustment.contrast + ' for reuse</p>');
-                            ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.workingBrightnessValue = adjustment.brightness;
-                            ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.workingContrastValue = adjustment.contrast;
+                            ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.workingBrightnessValue =
+                                adjustment.brightness;
+                            ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.workingContrastValue =
+                                adjustment.contrast;
                         }
                         else {
                             ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationStatusLabel.startBlinking();
-                            ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>No valid birth date found.</p>');
                         }
                         Method.checkOcrStep();
                     });
-                });
+                }, settings.pageSegmentation);
             };
             Method.getAgeMinimumValue = function () {
-                var minimumValue = ScanIdAgeVerificationPage.Config.MIN_SCAN_VALUE;
-                var idCountry = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.idCountry;
-                var idState = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.idState;
-                if (typeof Application.countryAgeMajority[idCountry] != 'undefined') {
-                    minimumValue = Application.countryAgeMajority[idCountry];
-                    if (idState != null &&
-                        typeof ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getStateMajorityList()[idCountry] != 'undefined' &&
-                        typeof ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getStateMajorityList()[idCountry][idState] != 'undefined') {
-                        minimumValue = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getStateMajorityList()[idCountry][idState];
-                    }
-                }
-                return minimumValue;
+                return Number(Application.requiredAge || 18);
             };
             Method.checkOcrStep = function () {
-                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validScanNumber == ScanIdAgeVerificationPage.Config.MAX_VALID_DATA_EXTRACTION_NUMBER) {
-                    ScanIdAgeVerificationPage.instance.debug.logToContainer('<p>Birth date final result:' + ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.lowestScanValue + '</p>');
-                    if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.lowestScanValue < Method.getAgeMinimumValue()) {
-                        Method.goToFailStep(25053, 'Detected your age is lower than ' + Method.getAgeMinimumValue() + ' years');
+                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.validScanNumber ==
+                    ScanIdAgeVerificationPage.Config.MAX_VALID_DATA_EXTRACTION_NUMBER) {
+                    if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.lowestScanValue <
+                        Method.getAgeMinimumValue()) {
+                        Method.goToFailStep(25053, "Detected your age is lower than " +
+                            Method.getAgeMinimumValue() +
+                            " years");
                         return;
                     }
                     ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.verificationComplete = true;
                     Method.goToSuccessStep();
                     return;
                 }
-                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber == ScanIdAgeVerificationPage.Config.MAX_TOTAL_DATA_EXTRACTION_NUMBER) {
-                    Method.goToFailStep(25054, 'Failed to extract your age from the current identity card');
+                if (ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber -
+                    Method.readingRoundStart >=
+                    Math.min(ScanIdAgeVerificationPage.Config.MAX_TOTAL_DATA_EXTRACTION_NUMBER, ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdVariantCount() * 4)) {
+                    Method.showCropReview();
                     return;
                 }
                 setTimeout(function () {
                     Method.ocrImage();
                 }, ScanIdAgeVerificationPage.Config.DATA_EXTRACTION_INTERVAL_MS);
             };
+            Method.showCropReview = function () {
+                if (Method.reviewOpen)
+                    return;
+                Method.reviewOpen = true;
+                var source = Method.getProcessingCanvas();
+                Avs.Debug.DocumentDiagnostics.emit("image-crop", "retry", { cropMode: Method.manualCrop ? "selected" : "automatic" }, "CROP_REVIEW");
+                ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationStatusLabel.stopBlinking();
+                ScanIdAgeVerificationPage.instance.ui.DocumentProcessingCanvasLoadingOverlayArea.hide();
+                ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingProcessArea.hide();
+                $("#documentProcessingCanvasContainer").hide();
+                Method.cropReview = new Avs.Helper.DocumentCropReview(document.getElementById("scanIdAgeVerificationDocumentProcessingArea"), source, Method.lastCrop, function (region) {
+                    Method.manualCrop = region;
+                    Method.readingRoundStart =
+                        ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber;
+                    Method.closeCropReview();
+                    ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationDocumentProcessingProcessArea.show();
+                    ScanIdAgeVerificationPage.instance.ui.DocumentProcessingCanvasLoadingOverlayArea.show();
+                    Avs.Debug.DocumentDiagnostics.emit("image-crop", "success", { cropMode: "selected" }, "CROP_SELECTED");
+                    Method.ocrImage();
+                }, function () {
+                    Method.closeCropReview();
+                    window.location.reload();
+                }, function () {
+                    Method.goToFailStep(25054, "Verification cancelled because the birth date could not be read.");
+                });
+            };
+            Method.closeCropReview = function () {
+                if (Method.cropReview)
+                    Method.cropReview.destroy();
+                Method.cropReview = null;
+                Method.reviewOpen = false;
+                $("#documentProcessingCanvasContainer").show();
+            };
             Method.goToSuccessStep = function () {
+                Method.closeCropReview();
+                Avs.Debug.DocumentDiagnostics.emit("document-result", "success", {
+                    attempt: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber,
+                });
                 AvsFactory.StartPage.Method.showPageStep(AvsFactory.StartPage.Config.RESULT_PAGE_SUCCESS_LAYER);
                 AvsFactory.ResultPageSuccess.init();
-                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.scanIdAgeVerificationInVideoBypassMode) {
+                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal
+                    .scanIdAgeVerificationInVideoBypassMode) {
                     ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.datachannels.webrtc.stopStreaming();
                 }
             };
             Method.goToFailStep = function (failCode, failReason) {
+                Method.closeCropReview();
+                Avs.Debug.DocumentDiagnostics.emit("document-result", "failure", {
+                    failureCode: failCode,
+                    attempt: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.totalScanNumber,
+                }, "VERIFICATION_FAILED");
                 AvsFactory.StartPage.Method.showPageStep(AvsFactory.StartPage.Config.RESULT_PAGE_FAIL_LAYER);
                 AvsFactory.ResultPageFail.init();
                 AvsFactory.ResultPageFail.Method.saveError(failCode);
-                AvsFactory.ResultPageFail.Method.renderFailReason(failCode + ': ' + failReason);
-                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.scanIdAgeVerificationInVideoBypassMode) {
+                AvsFactory.ResultPageFail.Method.renderFailReason(failCode + ": " + failReason);
+                if (!ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal
+                    .scanIdAgeVerificationInVideoBypassMode) {
                     ScanIdAgeVerificationPage.instance.plugin.Library.Video.CameraSource.datachannels.webrtc.stopStreaming();
                 }
             };
             Method.repositionScanId = function () {
-                if (ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal.scanIdAgeVerificationInVideoBypassMode) {
+                if (ScanIdAgeVerificationPage.instance.entity.VerificationStepGlobal
+                    .scanIdAgeVerificationInVideoBypassMode) {
                     return;
                 }
-                var elementPosition = Avs.Helper.ElementPositionCalculator.getScreenPositionFromConfig({
-                    width: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.container.width,
-                    height: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.container.height,
-                    maxWidth: ScanIdAgeVerificationPage.Config.BOUNDARY_MAX_WIDTH,
-                    maxHeight: ScanIdAgeVerificationPage.Config.BOUNDARY_MAX_HEIGHT,
-                    boundary: {
-                        top: ScanIdAgeVerificationPage.Config.BOUNDARY_TOP,
-                        bottom: ScanIdAgeVerificationPage.Config.BOUNDARY_BOTTOM,
-                        left: ScanIdAgeVerificationPage.Config.BOUNDARY_LEFT,
-                        right: ScanIdAgeVerificationPage.Config.BOUNDARY_RIGHT
-                    }
+                var container = ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList
+                    .container;
+                var ratio = container.width / container.height;
+                var previewWidth = Math.min(window.innerWidth * 0.68, 380, window.innerHeight * 0.38 * ratio);
+                $("#scanIdAgeVerificationPage .tv-id-camera-stage").css({
+                    width: previewWidth,
+                    height: previewWidth / ratio,
                 });
-                var innerElementPosition = Avs.Helper.ElementPositionCalculator.getScreenPositionRelativeToContainer({
-                    width: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.container.width,
-                    height: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.container.height,
-                    maxWidth: ScanIdAgeVerificationPage.Config.BOUNDARY_MAX_WIDTH,
-                    maxHeight: ScanIdAgeVerificationPage.Config.BOUNDARY_MAX_HEIGHT,
-                    boundary: {
-                        top: ScanIdAgeVerificationPage.Config.BOUNDARY_TOP,
-                        bottom: ScanIdAgeVerificationPage.Config.BOUNDARY_BOTTOM,
-                        left: ScanIdAgeVerificationPage.Config.BOUNDARY_LEFT,
-                        right: ScanIdAgeVerificationPage.Config.BOUNDARY_RIGHT
-                    }
-                }, {
-                    width: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.birthDateArea.width,
-                    height: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.birthDateArea.height,
-                    top: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.birthDateArea.top,
-                    left: ScanIdAgeVerificationPage.instance.entity.ScanIdAgeVerification.getIdTypeConfig().idSizeList.birthDateArea.left
-                });
-                Avs.Helper.ElementPositionCalculator.applyPositioning(ScanIdAgeVerificationPage.Config.ID_CARD_GUIDE_CONTAINER, elementPosition);
-                Avs.Helper.ElementPositionCalculator.applyPositioning(ScanIdAgeVerificationPage.Config.ID_CARD_GUIDE_BIRTH_DATE_CONTAINER, innerElementPosition);
+                // The guide is positioned inside the preview; screen offsets are mapped to camera pixels at capture time.
+                $(ScanIdAgeVerificationPage.Config.ID_CARD_GUIDE_CONTAINER).removeAttr("style");
+                $(ScanIdAgeVerificationPage.Config.ID_CARD_GUIDE_BIRTH_DATE_CONTAINER).hide();
             };
+            Method.manualCrop = null;
+            Method.lastCrop = null;
+            Method.cropReview = null;
+            Method.reviewOpen = false;
+            Method.readingRoundStart = 0;
             return Method;
         }());
         ScanIdAgeVerificationPage.Method = Method;
@@ -1110,12 +1251,17 @@ var AvsFactory;
             function Event() {
             }
             Event.init = function () {
-                ScanIdAgeVerificationPage.instance.event.on(ScanIdAgeVerificationPage.Config.EVENT_NAME_PREFIX + '.' + Avs.DataChannel.Webrtc.ON_WEBCAM_INIT_ERROR, function (event) {
-                    // allow error
+                ScanIdAgeVerificationPage.instance.event.on(ScanIdAgeVerificationPage.Config.EVENT_NAME_PREFIX +
+                    "." +
+                    Avs.DataChannel.Webrtc.ON_WEBCAM_INIT_ERROR, function (event) {
+                    ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationTakePhotoButton.disable();
+                    $("#idCaptureStatus").text("Camera unavailable. Allow camera access or browse an image.");
                 });
-                ScanIdAgeVerificationPage.instance.event.on(ScanIdAgeVerificationPage.Config.EVENT_NAME_PREFIX + '.' + Avs.DataChannel.Webrtc.ON_VIDEO_PLAY, function (event) {
+                ScanIdAgeVerificationPage.instance.event.on(ScanIdAgeVerificationPage.Config.EVENT_NAME_PREFIX + "." + Avs.DataChannel.Webrtc.ON_VIDEO_PLAY, function (event) {
                     ScanIdAgeVerificationPage.Method.repositionScanId();
-                    ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelArea.setContent('');
+                    ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationTakePhotoButton.enable();
+                    $("#idCaptureStatus").text("Hold steady, then take a photo.");
+                    ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelArea.setContent("");
                     ScanIdAgeVerificationPage.instance.ui.ScanIdAgeVerificationLoadingLabelArea.hide();
                     //Method.loadDetectionLibrary();
                 });
@@ -1140,6 +1286,10 @@ var AvsFactory;
             if (verificationStepGlobalEntity.faceApiType == Avs.Entity.VerificationStepGlobal.FACE_API_TYPE_PRECISE) {
                 faceApiDetectorType = Avs.Plugin.Library.Ml.FaceApi.DETECTOR_TYPE_SSD_MOBILE_NET_V1;
             }
+            // Use the document's configured language rather than forcing every document through French.
+            ScanIdAgeVerificationPage.Config.TESSERACT_LANGUAGE = scanIdAgeVerificationEntity.getIdTypeConfig().monthNameLanguage === 'en'
+                ? Avs.Plugin.Library.Ml.Tesseract.LANGUAGE_EN
+                : Avs.Plugin.Library.Ml.Tesseract.LANGUAGE_FR;
             ScanIdAgeVerificationPage.instance = new Avs.SelfieAgeDetectionPage({
                 debugLevel: ScanIdAgeVerificationPage.Config.DEFAULT_DEBUG_LEVEL,
                 event: {
@@ -1893,7 +2043,7 @@ var AvsFactory;
             Config.VERIFICATION_TYPE_LIST = ['selfie', 'scanId'];
             Config.DEFAULT_DEBUG_LEVEL = 4;
             Config.API_BASE_ENDPOINT = '';
-            Config.KEY_LOCAL_STORAGE_TERMS_AGREED = 'GoCamLocalStorageTermsWereAgreed';
+            Config.KEY_LOCAL_STORAGE_TERMS_AGREED = 'TrustVerifyTermsAcceptedV1';
             Config.PARTNER_ID = 0;
             Config.PAYLOAD = '';
             Config.CREDIT_CARD_VERIFICATION_ENDPOINT = '';
@@ -2198,7 +2348,7 @@ var AvsFactory;
                     //
                 }
                 StartPage.instance.ui.ErrorMessageQrTextArea.hide();
-                if (!Application.deviceInfo['os.mobile']) {
+                if (false) {
                     StartPage.instance.ui.ErrorMessageQrTextArea.show();
                     StartPage.instance.ui.StartPageErrorQrCode.renderTestToOtherDeviceQr();
                     StartPage.instance.startApiPolling(StartPage.instance.entity.VerificationStepGlobal.partnerId, StartPage.instance.entity.VerificationStepGlobal.payload);

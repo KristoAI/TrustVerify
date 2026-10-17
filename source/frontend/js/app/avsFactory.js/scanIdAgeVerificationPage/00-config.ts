@@ -11,15 +11,8 @@ namespace AvsFactory {
 				Config.API_BASE_ENDPOINT = config.apiBaseEndpoint || Config.API_BASE_ENDPOINT;
 
 				let verificationStepGlobalEntity = Avs.Entity.VerificationStepGlobal.getInstance();
-				if (
-					verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_EN ||
-					verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_PRECISE_FR
-				) {
-					Config.TESSERACT_LANGUAGE_PATH = '/static/js/vendor/tesseract-js-core-2.0.0/tessdata/best';
-				}
-				else {
-					Config.TESSERACT_LANGUAGE_PATH = '/static/js/vendor/tesseract-js-core-2.0.0/tessdata/fast';
-				}
+				// Both language models are bundled here; the old best/fast directories do not exist.
+				Config.TESSERACT_LANGUAGE_PATH = '/static/js/appFiles/tjs/data';
 
 				if (
 					verificationStepGlobalEntity.tesseractType == Avs.Entity.VerificationStepGlobal.TESSERACT_TYPE_FAST_FR ||

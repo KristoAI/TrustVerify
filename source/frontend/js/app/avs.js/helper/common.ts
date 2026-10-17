@@ -84,12 +84,13 @@ namespace Avs {
 			public static hasCameraFacingMode(facingMode: string, callback: Function) {
 
 				navigator.mediaDevices.getUserMedia({
-					audio: true,
+					audio: false,
 					video: {
 						facingMode: {exact: facingMode}
 					}
 				}).then(
-					() => {
+					(stream: MediaStream) => {
+						stream.getTracks().forEach(track => track.stop());
 						callback(true);
 					},
 					(error: Error) => {

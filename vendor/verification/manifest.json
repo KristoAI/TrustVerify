@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "path": "vendor/face-api/face-api.js",
+      "url": "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js",
+      "sha256": "a2fea18974e165bd0d192836e9cc040f8ad4d5cb5780fe2d2015b91903385447",
+      "license": "MIT"
+    },
+    {
+      "path": "vendor/face-api/tfjs-backend-wasm-simd.wasm",
+      "url": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.7.0/dist/tfjs-backend-wasm-simd.wasm",
+      "sha256": "77ebb28a6d34f371dbbf2086b7f2de8994acd8ea5a3cf1fa24d2c26c840cac7b",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "vendor/tesseract/tesseract.min.js",
+      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js",
+      "sha256": "ac5b57b256dbcbfdac61b1840a50b6090bc6003404e82abba1ef2125edc9e0ff",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "vendor/tesseract/worker.min.js",
+      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/worker.min.js",
+      "sha256": "3a793881610af9e8c3996ebbd82be23b8daa75ddfec79074ca60e49d2a11c2a6",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "vendor/tesseract/tesseract-core.asm.js",
+      "url": "https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/tesseract-core.asm.js",
+      "sha256": "74f5e06a95c3a6611575b180462549998350ace14e95bb98c6d3ea73d8f5faf7",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "models/face/age_gender_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/age_gender_model-shard1",
+      "sha256": "49f92bbc0afef2342c4385e4a2b0acb6d7a727c6f0aa539499719a81acf9abaa",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/age_gender_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/age_gender_model-weights_manifest.json",
+      "sha256": "780ca481c12f6501c63e3551caa4df9bc4a05ffc5357060079b75badfd350d86",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_expression_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_expression_model-shard1",
+      "sha256": "9a9840f2cf1f4c7eab95f197512569345c00d2426754d4608b92af30e0300f3d",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_expression_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_expression_model-weights_manifest.json",
+      "sha256": "960cbe959fe0328965dd18662d839f197df6e27607da4f726cd0c826e47fc936",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_landmark_68_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_model-shard1",
+      "sha256": "4611ef65c87d836d03d684b30eec4d195d8b219fa1dd58fc58945831c6b9299b",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_landmark_68_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_model-weights_manifest.json",
+      "sha256": "d30f6cc341009ea4f8223876959289b96576fc54a2615f92da9741ab9c5f0bbc",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_landmark_68_tiny_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_tiny_model-shard1",
+      "sha256": "b98e9f2f7da76f8a6dda9741a36ed485b224b889d552de2b2c1bb16217f67bfc",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_landmark_68_tiny_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_tiny_model-weights_manifest.json",
+      "sha256": "3c63b8984302c187b218d9ef5aa149ed8c2c7fa3fe54db078614692bc48d153c",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_recognition_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model-shard1",
+      "sha256": "412566a2b8d814d84c60b8055ec5d3b3b2328ef7cd7853384e03ec3db7b053d8",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_recognition_model-shard2",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model-shard2",
+      "sha256": "69350fdecd845c532e44dd8f7d0521c773505ef46b87cc34f46640a0cc334ecc",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/face_recognition_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model-weights_manifest.json",
+      "sha256": "6619f4126f845c1f7857f39cbd79565f375734f46e0dd25d9602f8dc21cda9f5",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/mtcnn_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/mtcnn_model-shard1",
+      "sha256": "20f4d3ac278e42e9a079453441533ec4e79bb6bd2e7cf7bd33e34ee123d674cb",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/mtcnn_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/mtcnn_model-weights_manifest.json",
+      "sha256": "fc566964c2af6733cd297ce596f0c87190e4cabcdbc90c9b7ce120ebe1897611",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/ssd_mobilenetv1_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model-shard1",
+      "sha256": "6ff16f095b0371f24accb48aab82e595697baa821cf851167cbf9203d1d7ec9a",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/ssd_mobilenetv1_model-shard2",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model-shard2",
+      "sha256": "2539847e627c8c4a561e999170735e6c527deecc6fdba2959fc5312fb1ea1de3",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/ssd_mobilenetv1_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model-weights_manifest.json",
+      "sha256": "9b84918d1d8b2e988dc5d72c0d77e7cc0a3d433f2452516fcd88dca8051b552f",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/tiny_face_detector_model-shard1",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/tiny_face_detector_model-shard1",
+      "sha256": "b7503ce7df31039b1c43316a9b865cab6a70dd748cc602d3fa28b551503c3871",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/face/tiny_face_detector_model-weights_manifest.json",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/tiny_face_detector_model-weights_manifest.json",
+      "sha256": "14c60659a31b6b7b1320077171b8f8adcb24ef0e62dde62ce603bcb49a1b49b5",
+      "license": "MIT",
+      "note": "Retained model under owner/counsel direction; see audit"
+    },
+    {
+      "path": "models/ocr/eng.traineddata.gz",
+      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/eng.traineddata.gz",
+      "sha256": "341ff75b44432480cf6cab965c3e7c23fae4de240dfb49fa9604e6008f95a708",
+      "license": "Apache-2.0",
+      "note": "OCR language data"
+    },
+    {
+      "path": "models/ocr/fra.traineddata.gz",
+      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/fra.traineddata.gz",
+      "sha256": "9f21d5a8728d7c48e1fd0ebc016689f262f268da33ae5b4e7071d127ff4eb52e",
+      "license": "Apache-2.0",
+      "note": "OCR language data"
+    },
+    {
+      "path": "licenses/face-api-MIT.txt",
+      "url": "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/LICENSE",
+      "sha256": "9a3442b79acaf4fbc7c2e07b7e2d8f84af9bb3871bf08a69d80304ab00640e9a",
+      "license": "MIT"
+    },
+    {
+      "path": "licenses/face-models-MIT.txt",
+      "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/LICENSE",
+      "sha256": "d5480b4d4e46880107a56db666697ec3e90def81a8fc829e530b1c291e3172a5",
+      "license": "MIT"
+    },
+    {
+      "path": "licenses/TensorFlow-Apache-2.0.txt",
+      "url": "https://raw.githubusercontent.com/tensorflow/tfjs/master/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "licenses/Tesseract-Apache-2.0.txt",
+      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/LICENSE.md",
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "licenses/Tesseract-core-Apache-2.0.txt",
+      "url": "https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/LICENSE",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "licenses/OCR-data-Apache-2.0.txt",
+      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "licenses/undici-types-MIT.txt",
+      "url": "https://raw.githubusercontent.com/nodejs/undici/v5.26.5/LICENSE",
+      "sha256": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27",
+      "license": "MIT"
+    }
+  ]
+}

@@ -84,7 +84,7 @@ namespace AvsFactory {
 
 			public static API_BASE_ENDPOINT = '';
 
-			public static KEY_LOCAL_STORAGE_TERMS_AGREED = 'GoCamLocalStorageTermsWereAgreed';
+			public static KEY_LOCAL_STORAGE_TERMS_AGREED = 'TrustVerifyTermsAcceptedV1';
 
 			public static PARTNER_ID                        = 0;
 			public static PAYLOAD                           = '';

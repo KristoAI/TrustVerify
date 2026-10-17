@@ -15,12 +15,12 @@ namespace Avs {
 			static readonly CONTAINER_SELECTOR = '#debugArea';
 
 			private debugLevel: number;
-			private container: JQuery;
+
 
 			constructor(debugLevel?: number) {
 
 				this.debugLevel = Log.LOG_LEVEL_ERROR;
-				this.container  = $(Log.CONTAINER_SELECTOR);
+
 
 				if (debugLevel) {
 					this.debugLevel = debugLevel;
@@ -31,7 +31,7 @@ namespace Avs {
 			public error(...params: Array<any>): void {
 
 				if (this.debugLevel >= Log.LOG_LEVEL_ERROR) {
-					console.error.apply(console, <any>arguments);
+					// Verification content must not be logged.
 				}
 
 			}
@@ -39,7 +39,7 @@ namespace Avs {
 			public warn(...params: Array<any>): void {
 
 				if (this.debugLevel >= Log.LOG_LEVEL_WARN) {
-					console.warn.apply(console, <any>arguments);
+					// Verification content must not be logged.
 				}
 
 			}
@@ -47,18 +47,12 @@ namespace Avs {
 			public info(...params: Array<any>): void {
 
 				if (this.debugLevel >= Log.LOG_LEVEL_INFO) {
-					console.log.apply(console, <any>arguments);
+					// Verification content must not be logged.
 				}
 
 			}
 
-			public logToContainer(content: any) {
-
-				if (this.container.length && !this.container.hasClass('isHidden')) {
-					this.container.append(content);
-					this.container.get(0).scrollTop = this.container.get(0).scrollHeight;
-				}
-
+			public logToContainer(content: any) { /* No image or OCR debug output. */
 			}
 
 			public static genericLog(...params: Array<any>): void {

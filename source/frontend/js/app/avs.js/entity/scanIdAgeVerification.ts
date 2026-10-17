@@ -96,7 +96,7 @@ namespace Avs {
 
 			}
 
-			public incrementIdVariantCurrent() {
+			public getIdVariantCount() {
 
 				let totalIdVariantNumber = 0;
 				if (this.idState !== null) {
@@ -106,7 +106,11 @@ namespace Avs {
 					totalIdVariantNumber = Avs.Config.scanIdList[this.idCountry]['idConfig'][this.idTypeString].length;
 				}
 
-				this.idVariantCurrent = (this.idVariantCurrent + 1) % totalIdVariantNumber;
+				return totalIdVariantNumber;
+			}
+
+			public incrementIdVariantCurrent() {
+				this.idVariantCurrent = (this.idVariantCurrent + 1) % this.getIdVariantCount();
 
 			}
 

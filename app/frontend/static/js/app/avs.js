@@ -20616,6 +20616,180 @@ var Avs;
 })(Avs || (Avs = {}));
 
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var Avs;
+(function (Avs) {
+    var Debug;
+    (function (Debug) {
+        /** Console-only diagnostics. Never pass document content, identity data, or raw errors here. */
+        var DocumentDiagnostics = /** @class */ (function () {
+            function DocumentDiagnostics() {
+            }
+            DocumentDiagnostics.setAttempt = function (attempt, variant, profile) {
+                this.context = { attempt: attempt, variant: variant, profile: profile };
+            };
+            /** Sanitized in-memory copy for support; never stored or uploaded. */
+            DocumentDiagnostics.getReport = function () {
+                return this.report.join("\n");
+            };
+            DocumentDiagnostics.begin = function () {
+                this.run++;
+                this.context = {};
+                this.report = [];
+                this.retryCounts = {};
+                this.install();
+            };
+            DocumentDiagnostics.install = function () {
+                var _this = this;
+                if (this.listening)
+                    return;
+                this.listening = true;
+                window.addEventListener("securitypolicyviolation", function (event) {
+                    if (/^(script-src|worker-src|connect-src)/.test(event.effectiveDirective)) {
+                        // Do not print blockedURI/sourceFile: they can contain tokens or document data.
+                        _this.emit("security-policy", "failure", {}, "CSP_BLOCKED");
+                    }
+                });
+            };
+            DocumentDiagnostics.errorCode = function (error) {
+                // Inspect locally, but NEVER forward the original error/message/stack to the console.
+                var message = typeof error === "string"
+                    ? error
+                    : error && typeof error.message === "string"
+                        ? error.message
+                        : "";
+                if (/content security|unsafe-eval|refused to|\bcsp\b/i.test(message))
+                    return "CSP_BLOCKED";
+                if (/fetch|network|importscripts|failed to load|404|403/i.test(message))
+                    return "NETWORK_ERROR";
+                return "WORKER_ERROR";
+            };
+            DocumentDiagnostics.emit = function (stage, status, details, code) {
+                if (details === void 0) { details = {}; }
+                if (this.stages.indexOf(stage) < 0 ||
+                    ["start", "progress", "success", "retry", "failure"].indexOf(status) < 0)
+                    return;
+                var safe = { run: this.run, stage: stage, status: status };
+                details = __assign(__assign({}, this.context), details);
+                // Runtime allowlist, so even accidental extra fields cannot expose extracted text or biometrics.
+                for (var _i = 0, _a = [
+                    "attempt",
+                    "variant",
+                    "profile",
+                    "pageSegmentation",
+                    "layoutYear",
+                    "width",
+                    "height",
+                    "elapsedMs",
+                    "progressPercent",
+                    "characterCount",
+                    "ruleCount",
+                    "ruleIndex",
+                    "failureCode",
+                    "httpStatus",
+                ]; _i < _a.length; _i++) {
+                    var key = _a[_i];
+                    if (typeof details[key] === "number" && isFinite(details[key]))
+                        safe[key] = Math.round(details[key]);
+                }
+                if ([
+                    "ocr-worker",
+                    "ocr-core",
+                    "ocr-language-eng",
+                    "ocr-language-fra",
+                ].indexOf(details.asset) >= 0)
+                    safe.asset = details.asset;
+                if (code && Object.prototype.hasOwnProperty.call(this.hints, code)) {
+                    safe.code = code;
+                    safe.hint = this.hints[code];
+                }
+                if (details.cropMode === "automatic" || details.cropMode === "selected")
+                    safe.cropMode = details.cropMode;
+                if (details.language === "eng" || details.language === "fra")
+                    safe.language = details.language;
+                if (status === "retry" && code) {
+                    var key = stage + ":" + code;
+                    this.retryCounts[key] = (this.retryCounts[key] || 0) + 1;
+                    safe.occurrences = this.retryCounts[key];
+                }
+                if (stage === "document-result")
+                    safe.retryCounts = __assign({}, this.retryCounts);
+                // String snapshot prevents DevTools retaining mutable objects containing sensitive fields.
+                var message = "[TrustBunny][document] " + JSON.stringify(safe);
+                this.report.push(message);
+                if (this.report.length > 1000)
+                    this.report.shift();
+                if (status === "failure")
+                    console.error(message);
+                // Expected retries are info, avoiding hundreds of DevTools async warning stacks.
+                else
+                    console.info(message);
+            };
+            DocumentDiagnostics.run = 0;
+            DocumentDiagnostics.listening = false;
+            DocumentDiagnostics.context = {};
+            DocumentDiagnostics.report = [];
+            DocumentDiagnostics.retryCounts = {};
+            DocumentDiagnostics.stages = [
+                "asset-preload",
+                "document-image",
+                "worker-create",
+                "worker-load",
+                "language-load",
+                "language-init",
+                "worker-configure",
+                "ocr-recognize",
+                "ocr-text",
+                "date-match",
+                "date-parse",
+                "face-detect-model",
+                "face-recognition-model",
+                "face-landmarks-model",
+                "face-extract",
+                "face-compare",
+                "image-crop",
+                "image-preprocess",
+                "document-result",
+                "security-policy",
+            ];
+            DocumentDiagnostics.hints = {
+                CROP_REVIEW: "Reading paused for local crop review. No verification result has been granted.",
+                CROP_SELECTED: "User selected a local image region. OCR and age checks must still succeed.",
+                LIBRARY_MISSING: "The Tesseract browser library did not load. Check its script in Network.",
+                WORKER_ERROR: "The document worker failed. Check the preceding stage and asset requests in Network.",
+                NETWORK_ERROR: "An OCR asset could not be fetched. Check worker, core and traineddata requests in Network.",
+                CSP_BLOCKED: "Browser security policy blocked OCR. Check the browser CSP violation and worker/core requests.",
+                TIMEOUT: "This stage exceeded 90 seconds. Check asset requests, worker errors and available memory.",
+                NOT_READY: "A required OCR initialization stage has not succeeded.",
+                INVALID_CONFIG: "The selected document layout has invalid OCR parameters or date matcher configuration.",
+                INVALID_RESULT: "The OCR worker returned no usable text result.",
+                EMPTY_TEXT: "OCR finished but read no text. Check image quality and whether the date crop covers the correct area.",
+                NO_DATE_MATCH: "OCR read text, but no configured date pattern matched. Check document type, layout variant and crop.",
+                INVALID_DATE: "A pattern matched but its captures do not form a valid calendar date.",
+                INVALID_IMAGE: "The document image or crop has invalid dimensions or lies outside the source image.",
+                CROP_CLIPPED: "Part of the expected date region lies outside the image. OCR will still try the visible portion; check framing and document layout.",
+                IMAGE_ERROR: "Image preparation failed. Check canvas availability and image decoding.",
+                NO_FACE: "No document face was found in this attempt; text extraction has not started.",
+                MODEL_ERROR: "A face model could not load. Check model requests in Network.",
+                VERIFICATION_FAILED: "Document verification ended. The numeric failureCode identifies the application outcome.",
+            };
+            return DocumentDiagnostics;
+        }());
+        Debug.DocumentDiagnostics = DocumentDiagnostics;
+    })(Debug = Avs.Debug || (Avs.Debug = {}));
+})(Avs || (Avs = {}));
+
+"use strict";
 var Avs;
 (function (Avs) {
     var Debug;
@@ -20627,7 +20801,6 @@ var Avs;
         var Log = /** @class */ (function () {
             function Log(debugLevel) {
                 this.debugLevel = Log.LOG_LEVEL_ERROR;
-                this.container = $(Log.CONTAINER_SELECTOR);
                 if (debugLevel) {
                     this.debugLevel = debugLevel;
                 }
@@ -20638,7 +20811,7 @@ var Avs;
                     params[_i] = arguments[_i];
                 }
                 if (this.debugLevel >= Log.LOG_LEVEL_ERROR) {
-                    console.error.apply(console, arguments);
+                    // Verification content must not be logged.
                 }
             };
             Log.prototype.warn = function () {
@@ -20647,7 +20820,7 @@ var Avs;
                     params[_i] = arguments[_i];
                 }
                 if (this.debugLevel >= Log.LOG_LEVEL_WARN) {
-                    console.warn.apply(console, arguments);
+                    // Verification content must not be logged.
                 }
             };
             Log.prototype.info = function () {
@@ -20656,14 +20829,10 @@ var Avs;
                     params[_i] = arguments[_i];
                 }
                 if (this.debugLevel >= Log.LOG_LEVEL_INFO) {
-                    console.log.apply(console, arguments);
+                    // Verification content must not be logged.
                 }
             };
             Log.prototype.logToContainer = function (content) {
-                if (this.container.length && !this.container.hasClass('isHidden')) {
-                    this.container.append(content);
-                    this.container.get(0).scrollTop = this.container.get(0).scrollHeight;
-                }
             };
             Log.genericLog = function () {
                 var params = [];
@@ -20727,7 +20896,7 @@ var Avs;
                 }
                 return Avs.Config.scanIdList[this.idCountry]['idConfig'][this.idTypeString][this.idVariantCurrent];
             };
-            ScanIdAgeVerification.prototype.incrementIdVariantCurrent = function () {
+            ScanIdAgeVerification.prototype.getIdVariantCount = function () {
                 var totalIdVariantNumber = 0;
                 if (this.idState !== null) {
                     totalIdVariantNumber = Avs.Config.scanIdList[this.idCountry]['stateList'][this.idState]['idConfig'][this.idTypeString].length;
@@ -20735,7 +20904,10 @@ var Avs;
                 else {
                     totalIdVariantNumber = Avs.Config.scanIdList[this.idCountry]['idConfig'][this.idTypeString].length;
                 }
-                this.idVariantCurrent = (this.idVariantCurrent + 1) % totalIdVariantNumber;
+                return totalIdVariantNumber;
+            };
+            ScanIdAgeVerification.prototype.incrementIdVariantCurrent = function () {
+                this.idVariantCurrent = (this.idVariantCurrent + 1) % this.getIdVariantCount();
             };
             // TODO: make this dynamic, not static (extract from DB maybe)
             ScanIdAgeVerification.prototype.getStateMajorityList = function () {
@@ -21613,7 +21785,7 @@ var Avs;
                     else {
                         errorObj.code = 6;
                     }
-                    return errorObj;
+                    return $.Deferred().reject(errorObj).promise();
                 });
                 promise.jqXHR = jqXHR;
                 return promise;
@@ -21773,11 +21945,12 @@ var Avs;
             };
             Common.hasCameraFacingMode = function (facingMode, callback) {
                 navigator.mediaDevices.getUserMedia({
-                    audio: true,
+                    audio: false,
                     video: {
                         facingMode: { exact: facingMode }
                     }
-                }).then(function () {
+                }).then(function (stream) {
+                    stream.getTracks().forEach(function (track) { return track.stop(); });
                     callback(true);
                 }, function (error) {
                     callback(false);
@@ -22170,6 +22343,205 @@ var Avs;
 })(Avs || (Avs = {}));
 
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var Avs;
+(function (Avs) {
+    var Helper;
+    (function (Helper) {
+        /** Local-only image selection. No serialization, uploads, storage, or extracted-text display. */
+        var DocumentCropReview = /** @class */ (function () {
+            function DocumentCropReview(container, source, initial, onConfirm, onRetake, onCancel) {
+                var _this = this;
+                this.start = null;
+                this.source = source;
+                var fallback = {
+                    left: source.width * 0.35,
+                    top: source.height * 0.4,
+                    width: source.width * 0.35,
+                    height: source.height * 0.15,
+                    scalePercent: 1,
+                };
+                try {
+                    this.region = Helper.DocumentOcr.clampRegion(initial || fallback, source.width, source.height);
+                }
+                catch (error) {
+                    this.region = Helper.DocumentOcr.clampRegion(fallback, source.width, source.height);
+                }
+                this.panel = document.createElement("section");
+                this.panel.className = "tv-crop-review";
+                this.panel.setAttribute("aria-labelledby", "tv-crop-heading");
+                this.panel.innerHTML = "<h2 id=\"tv-crop-heading\" tabindex=\"-1\">Help us locate your birth date</h2>\n\t\t\t\t<p>We couldn't read the date from the automatic selection. Draw a box around your <strong>date of birth</strong>, keeping the entire date visible. Choose the birth date, not the issue or expiration date.</p>\n\t\t\t\t<p class=\"tv-crop-private\">Your photo stays in this browser. Nothing here is uploaded.</p>\n\t\t\t\t<canvas class=\"tv-crop-image\" aria-label=\"Document photo with selected reading area\"></canvas>\n\t\t\t\t<details><summary>Adjust the box with sliders</summary><div class=\"tv-crop-controls\">\n\t\t\t\t<label>Horizontal position<input type=\"range\" min=\"0\" max=\"99\" step=\"0.5\" data-field=\"left\"></label>\n\t\t\t\t<label>Vertical position<input type=\"range\" min=\"0\" max=\"99\" step=\"0.5\" data-field=\"top\"></label>\n\t\t\t\t<label>Box width<input type=\"range\" min=\"1\" max=\"100\" step=\"0.5\" data-field=\"width\"></label>\n\t\t\t\t<label>Box height<input type=\"range\" min=\"1\" max=\"100\" step=\"0.5\" data-field=\"height\"></label>\n\t\t\t\t</div></details>\n\t\t\t\t<h3>Area we will read</h3><canvas class=\"tv-crop-preview\" aria-label=\"Preview of selected birth date area\"></canvas>\n\t\t\t\t<p>Check that the date is sharp and complete. If it is blurry or missing, start over with a clearer photo.</p>\n\t\t\t\t<div class=\"tv-crop-actions\"><button type=\"button\" data-action=\"read\">Read selected area</button>\n\t\t\t\t<button type=\"button\" data-action=\"retake\">Start over with a new photo</button>\n\t\t\t\t<button type=\"button\" data-action=\"cancel\">Cancel verification</button></div>";
+                container.appendChild(this.panel);
+                this.canvas = this.panel.querySelector(".tv-crop-image");
+                this.preview = this.panel.querySelector(".tv-crop-preview");
+                var scale = Math.min(1, 1000 / source.width);
+                this.canvas.width = Math.round(source.width * scale);
+                this.canvas.height = Math.round(source.height * scale);
+                this.panel
+                    .querySelectorAll("input")
+                    .forEach(function (input) {
+                    input.addEventListener("input", function () {
+                        var field = input.getAttribute("data-field");
+                        var horizontal = field === "left" || field === "width";
+                        _this.region[field] =
+                            (Number(input.value) / 100) *
+                                (horizontal ? source.width : source.height);
+                        _this.region = Helper.DocumentOcr.clampRegion(_this.region, source.width, source.height);
+                        _this.draw();
+                    });
+                });
+                var point = function (event) {
+                    var bounds = _this.canvas.getBoundingClientRect();
+                    return {
+                        x: Math.max(0, Math.min(source.width, ((event.clientX - bounds.left) / bounds.width) * source.width)),
+                        y: Math.max(0, Math.min(source.height, ((event.clientY - bounds.top) / bounds.height) * source.height)),
+                    };
+                };
+                this.canvas.addEventListener("pointerdown", function (event) {
+                    if (!event.isPrimary || event.button !== 0)
+                        return;
+                    _this.start = point(event);
+                    _this.canvas.setPointerCapture(event.pointerId);
+                });
+                this.canvas.addEventListener("pointermove", function (event) {
+                    if (!_this.start || !event.isPrimary)
+                        return;
+                    var end = point(event);
+                    _this.region = Helper.DocumentOcr.clampRegion({
+                        left: Math.min(_this.start.x, end.x),
+                        top: Math.min(_this.start.y, end.y),
+                        width: Math.max(1, Math.abs(end.x - _this.start.x)),
+                        height: Math.max(1, Math.abs(end.y - _this.start.y)),
+                        scalePercent: 1,
+                    }, source.width, source.height);
+                    _this.draw();
+                });
+                var stop = function () {
+                    _this.start = null;
+                };
+                this.canvas.addEventListener("pointerup", stop);
+                this.canvas.addEventListener("pointercancel", stop);
+                this.panel
+                    .querySelector('[data-action="read"]')
+                    .addEventListener("click", function () {
+                    if (_this.region.width < 8 || _this.region.height < 8)
+                        return;
+                    onConfirm(__assign({}, _this.region));
+                });
+                this.panel
+                    .querySelector('[data-action="retake"]')
+                    .addEventListener("click", onRetake);
+                this.panel
+                    .querySelector('[data-action="cancel"]')
+                    .addEventListener("click", onCancel);
+                this.draw();
+                this.panel.querySelector("h2").focus();
+            }
+            DocumentCropReview.prototype.draw = function () {
+                var _this = this;
+                var r = this.region, scale = this.canvas.width / this.source.width;
+                var ctx = this.canvas.getContext("2d");
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                ctx.drawImage(this.source, 0, 0, this.canvas.width, this.canvas.height);
+                ctx.fillStyle = "rgba(6,20,30,.55)";
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                ctx.drawImage(this.source, r.left, r.top, r.width, r.height, r.left * scale, r.top * scale, r.width * scale, r.height * scale);
+                ctx.strokeStyle = "#5bffc9";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(r.left * scale, r.top * scale, r.width * scale, r.height * scale);
+                var previewScale = Math.min(4, 600 / r.width, 160 / r.height);
+                this.preview.width = Math.max(1, Math.round(r.width * previewScale));
+                this.preview.height = Math.max(1, Math.round(r.height * previewScale));
+                this.preview
+                    .getContext("2d")
+                    .drawImage(this.source, r.left, r.top, r.width, r.height, 0, 0, this.preview.width, this.preview.height);
+                this.panel
+                    .querySelectorAll("input")
+                    .forEach(function (input) {
+                    var field = input.getAttribute("data-field");
+                    input.value = String((r[field] /
+                        (field === "left" || field === "width"
+                            ? _this.source.width
+                            : _this.source.height)) *
+                        100);
+                });
+                (this.panel.querySelector('[data-action="read"]')).disabled = r.width < 8 || r.height < 8;
+            };
+            DocumentCropReview.prototype.destroy = function () {
+                this.canvas.width = 0;
+                this.preview.width = 0;
+                this.panel.remove();
+                this.source = null;
+                this.start = null;
+            };
+            return DocumentCropReview;
+        }());
+        Helper.DocumentCropReview = DocumentCropReview;
+    })(Helper = Avs.Helper || (Avs.Helper = {}));
+})(Avs || (Avs = {}));
+
+"use strict";
+var Avs;
+(function (Avs) {
+    var Helper;
+    (function (Helper) {
+        /** Repeatable, bounded attempts; always try the original pixels before enhancing them. */
+        var DocumentOcr = /** @class */ (function () {
+            function DocumentOcr() {
+            }
+            DocumentOcr.clampRegion = function (region, width, height) {
+                if (![
+                    region.left,
+                    region.top,
+                    region.width,
+                    region.height,
+                    width,
+                    height,
+                ].every(function (value) { return isFinite(value); }) ||
+                    width < 1 ||
+                    height < 1 ||
+                    region.width <= 0 ||
+                    region.height <= 0)
+                    throw new Error("Invalid crop dimensions");
+                var left = Math.max(0, Math.min(width - 1, region.left)), top = Math.max(0, Math.min(height - 1, region.top));
+                return {
+                    left: left,
+                    top: top,
+                    width: Math.max(1, Math.min(region.width, width - left)),
+                    height: Math.max(1, Math.min(region.height, height - top)),
+                    scalePercent: 1,
+                };
+            };
+            DocumentOcr.attempt = function (index, variantCount) {
+                var pass = Math.floor(index / Math.max(1, variantCount));
+                var profile = pass % 4;
+                var scales = [0, -0.05, 0.05, -0.1, 0.1];
+                return {
+                    profile: profile,
+                    grayscale: profile !== 0,
+                    brightness: profile === 3 ? 10 : 0,
+                    contrast: profile >= 2 ? 20 : 0,
+                    scaleAdjustment: scales[Math.floor(pass / 4) % scales.length],
+                    pageSegmentation: profile % 2 === 0 ? 6 : 7,
+                };
+            };
+            return DocumentOcr;
+        }());
+        Helper.DocumentOcr = DocumentOcr;
+    })(Helper = Avs.Helper || (Avs.Helper = {}));
+})(Avs || (Avs = {}));
+
+"use strict";
 var Avs;
 (function (Avs) {
     var Helper;
@@ -22255,15 +22627,10 @@ var Avs;
                     scaleRatio: scaleRatio
                 };
             };
-            ElementPositionCalculator.calculateBirthDateMaskPosition = function (faceCoordinates, idSizeConfig) {
-                var faceDimensionRatio = faceCoordinates.width / idSizeConfig.faceArea.width;
-                // allow up to 20% random position
-                if (Math.random() > 0.5) {
-                    faceDimensionRatio += faceDimensionRatio * Math.random() / 5;
-                }
-                else {
-                    faceDimensionRatio -= faceDimensionRatio * Math.random() / 5;
-                }
+            ElementPositionCalculator.calculateBirthDateMaskPosition = function (faceCoordinates, idSizeConfig, scaleAdjustment) {
+                if (scaleAdjustment === void 0) { scaleAdjustment = 0; }
+                // Stable first crop; callers may request a small, explicit retry adjustment.
+                var faceDimensionRatio = faceCoordinates.width / idSizeConfig.faceArea.width * (1 + scaleAdjustment);
                 return {
                     top: faceCoordinates.top + (idSizeConfig.faceArea.birthDateAreaDistance.top * faceDimensionRatio),
                     left: faceCoordinates.left + (idSizeConfig.faceArea.birthDateAreaDistance.left * faceDimensionRatio),
@@ -22303,9 +22670,9 @@ var Avs;
                         status: FilePreloader.FILE_STATUS_PRELOADING,
                         error: {
                             code: 0,
-                            msg: ''
-                        }
-                    }
+                            msg: "",
+                        },
+                    },
                 };
                 this.event = event;
                 this.instanceIndex = instanceIndex;
@@ -22318,16 +22685,30 @@ var Avs;
                         status: FilePreloader.FILE_STATUS_PRELOADING,
                         error: {
                             code: 0,
-                            msg: ''
-                        }
+                            msg: "",
+                        },
                     };
                 }
             };
             FilePreloader.prototype.preloadFile = function (fileUrl) {
                 var _this = this;
+                var diagnosticAssets = {
+                    "/static/js/appFiles/tjs/w.min.js": "ocr-worker",
+                    "/static/js/appFiles/tjs/tscasm.js": "ocr-core",
+                    "/static/js/appFiles/tjs/data/eng.traineddata.gz": "ocr-language-eng",
+                    "/static/js/appFiles/tjs/data/fra.traineddata.gz": "ocr-language-fra",
+                };
+                var asset = diagnosticAssets[fileUrl];
+                var started = Date.now();
+                if (asset) {
+                    Avs.Debug.DocumentDiagnostics.install();
+                    Avs.Debug.DocumentDiagnostics.emit("asset-preload", "start", {
+                        asset: asset,
+                    });
+                }
                 $.ajax({
-                    type: 'get',
-                    dataType: 'text',
+                    type: "get",
+                    dataType: "text",
                     url: fileUrl,
                     async: true,
                     processData: false,
@@ -22336,34 +22717,47 @@ var Avs;
                         try {
                             parsedData = JSON.parse(data);
                         }
-                        catch (e) {
-                        }
-                        if (typeof parsedData !== 'undefined' && typeof parsedData.error !== 'undefined') {
-                            _this.fileListInfo[fileUrl].status = FilePreloader.FILE_STATUS_ERROR;
+                        catch (e) { }
+                        if (typeof parsedData !== "undefined" &&
+                            typeof parsedData.error !== "undefined") {
+                            _this.fileListInfo[fileUrl].status =
+                                FilePreloader.FILE_STATUS_ERROR;
                             _this.fileListInfo[fileUrl].error = parsedData.error;
                         }
                         else {
                             _this.fileListInfo[fileUrl].progress = 100;
-                            _this.fileListInfo[fileUrl].status = FilePreloader.FILE_STATUS_SUCCESS;
+                            _this.fileListInfo[fileUrl].status =
+                                FilePreloader.FILE_STATUS_SUCCESS;
+                        }
+                        if (asset) {
+                            var failed = _this.fileListInfo[fileUrl].status ===
+                                FilePreloader.FILE_STATUS_ERROR;
+                            Avs.Debug.DocumentDiagnostics.emit("asset-preload", failed ? "failure" : "success", { asset: asset, elapsedMs: Date.now() - started }, failed ? "NETWORK_ERROR" : undefined);
                         }
                         _this.triggerChange();
                     },
                     error: function (error, textStatus, errorThrown) {
+                        if (asset)
+                            Avs.Debug.DocumentDiagnostics.emit("asset-preload", "failure", {
+                                asset: asset,
+                                httpStatus: error.status,
+                                elapsedMs: Date.now() - started,
+                            }, "NETWORK_ERROR");
                         _this.fileListInfo[fileUrl].status = FilePreloader.FILE_STATUS_ERROR;
                         _this.fileListInfo[fileUrl].error = {
                             code: 25010,
-                            msg: 'status: ' + textStatus + ' error: ' + errorThrown
+                            msg: "status: " + textStatus + " error: " + errorThrown,
                         };
                         _this.triggerChange();
                     },
                     xhr: function () {
                         var xhr = $.ajaxSettings.xhr();
                         xhr.onprogress = function (e) {
-                            _this.fileListInfo[fileUrl].progress = e.loaded / e.total * 100;
+                            _this.fileListInfo[fileUrl].progress = (e.loaded / e.total) * 100;
                             _this.triggerChange();
                         };
                         return xhr;
-                    }
+                    },
                 });
             };
             FilePreloader.prototype.triggerChange = function () {
@@ -22372,7 +22766,7 @@ var Avs;
                 var fileListProgressTotal = 0;
                 var fileListPreloadStatus = FilePreloader.FILE_STATUS_PRELOADING;
                 for (var i in this.fileListInfo) {
-                    if (i === 'total') {
+                    if (i === "total") {
                         continue;
                     }
                     fileListProgressTotal += this.fileListInfo[i].progress;
@@ -22387,13 +22781,16 @@ var Avs;
                 fileListProgressTotal = fileListProgressTotal / this.fileList.length;
                 fileListProgressTotal = parseInt(fileListProgressTotal);
                 if (fileListPreloadComplete) {
-                    fileListPreloadStatus = fileListTotalErrorNumber == 0 ? FilePreloader.FILE_STATUS_SUCCESS : FilePreloader.FILE_STATUS_ERROR;
+                    fileListPreloadStatus =
+                        fileListTotalErrorNumber == 0
+                            ? FilePreloader.FILE_STATUS_SUCCESS
+                            : FilePreloader.FILE_STATUS_ERROR;
                 }
                 this.fileListInfo.total.progress = fileListProgressTotal;
                 this.fileListInfo.total.status = fileListPreloadStatus;
-                this.event.emit(FilePreloader.ON_PRELOAD_EVENT + '.' + this.instanceIndex, this.fileListInfo);
+                this.event.emit(FilePreloader.ON_PRELOAD_EVENT + "." + this.instanceIndex, this.fileListInfo);
             };
-            FilePreloader.ON_PRELOAD_EVENT = 'Avs.Helper.FilePreloader.onPreloadEvent';
+            FilePreloader.ON_PRELOAD_EVENT = "Avs.Helper.FilePreloader.onPreloadEvent";
             FilePreloader.FILE_STATUS_PRELOADING = 1;
             FilePreloader.FILE_STATUS_SUCCESS = 2;
             FilePreloader.FILE_STATUS_ERROR = 3;
@@ -22582,51 +22979,66 @@ var Avs;
         var VideoAreaExtractor = /** @class */ (function () {
             function VideoAreaExtractor() {
             }
-            VideoAreaExtractor.calculateMaskPosition = function (maskElement, videoElement) {
-                var maskElementInstance = $(maskElement);
-                var videoElementInstance = $(videoElement);
-                var maskElementWidth = maskElementInstance.width();
-                var maskElementHeight = maskElementInstance.height();
-                var maskElementPosition = maskElementInstance.position();
-                var maskElementBorder = parseInt(maskElementInstance.css('border-left-width'));
-                var videoElementWidth = videoElementInstance.width();
-                var videoElementHeight = videoElementInstance.height();
-                var mediaWidth = videoElementInstance.get(0).videoWidth;
-                var mediaHeight = videoElementInstance.get(0).videoHeight;
-                var onScreenAspectRatio = videoElementWidth / videoElementHeight;
-                var mediaAspectRatio = mediaWidth / mediaHeight;
-                var scalePercent = 0;
-                var maskElementTop = 0;
-                var maskElementLeft = 0;
-                if (onScreenAspectRatio > mediaAspectRatio) {
-                    scalePercent = (videoElementWidth * 100 / mediaWidth);
-                    maskElementTop = ((mediaHeight - (videoElementHeight * 100 / scalePercent)) / 2) + maskElementPosition.top * 100 / scalePercent;
-                    maskElementLeft = maskElementPosition.left * 100 / scalePercent;
-                    maskElementTop = maskElementTop + maskElementBorder;
-                    maskElementLeft = maskElementLeft + maskElementBorder;
-                }
-                else {
-                    scalePercent = (videoElementHeight * 100 / mediaHeight);
-                    maskElementTop = maskElementPosition.top * 100 / scalePercent;
-                    maskElementLeft = ((mediaWidth - (videoElementWidth * 100 / scalePercent)) / 2) + (maskElementPosition.left * 100 / scalePercent);
-                    maskElementTop = maskElementTop + maskElementBorder;
-                    maskElementLeft = maskElementLeft + maskElementBorder;
-                }
+            /** Map a guide in viewport CSS pixels to the original, center-cropped camera frame. */
+            VideoAreaExtractor.mapMaskToSource = function (mask, video, mediaWidth, mediaHeight, mirrored) {
+                if (mirrored === void 0) { mirrored = false; }
+                if (![
+                    mask.left,
+                    mask.top,
+                    mask.width,
+                    mask.height,
+                    video.left,
+                    video.top,
+                    video.width,
+                    video.height,
+                    mediaWidth,
+                    mediaHeight,
+                ].every(function (value) { return isFinite(value); }) ||
+                    mediaWidth <= 0 ||
+                    mediaHeight <= 0 ||
+                    video.width <= 0 ||
+                    video.height <= 0 ||
+                    mask.width <= 0 ||
+                    mask.height <= 0)
+                    throw new Error("Camera frame not ready");
+                var scale = Math.max(video.width / mediaWidth, video.height / mediaHeight);
+                var width = mask.width / scale, height = mask.height / scale;
+                var left = (mask.left - video.left) / scale +
+                    (mediaWidth - video.width / scale) / 2;
+                var top = (mask.top - video.top) / scale +
+                    (mediaHeight - video.height / scale) / 2;
+                if (mirrored)
+                    left = mediaWidth - left - width;
+                var clippedLeft = Math.max(0, left), clippedTop = Math.max(0, top);
                 return {
-                    top: maskElementTop,
-                    left: maskElementLeft,
-                    width: maskElementWidth * 100 / scalePercent,
-                    height: maskElementHeight * 100 / scalePercent,
-                    scalePercent: scalePercent
+                    left: clippedLeft,
+                    top: clippedTop,
+                    width: Math.max(0, Math.min(mediaWidth, left + width) - clippedLeft),
+                    height: Math.max(0, Math.min(mediaHeight, top + height) - clippedTop),
+                    scalePercent: scale * 100,
                 };
+            };
+            VideoAreaExtractor.calculateMaskPosition = function (maskElement, videoElement) {
+                var mask = maskElement.getBoundingClientRect(), video = videoElement.getBoundingClientRect();
+                var style = window.getComputedStyle(maskElement);
+                var left = parseFloat(style.borderLeftWidth) || 0, right = parseFloat(style.borderRightWidth) || 0;
+                var top = parseFloat(style.borderTopWidth) || 0, bottom = parseFloat(style.borderBottomWidth) || 0;
+                return this.mapMaskToSource({
+                    left: mask.left + left,
+                    top: mask.top + top,
+                    width: mask.width - left - right,
+                    height: mask.height - top - bottom,
+                }, video, videoElement.videoWidth, videoElement.videoHeight, videoElement.classList.contains("mirrored"));
             };
             VideoAreaExtractor.videoMaskToCanvas = function (videoElement, canvasElement, maskPosition, canvasZoom) {
                 var canvasZoomValue = canvasZoom || 1;
                 var videoElementInstance = $(videoElement);
                 var canvasElementInstance = $(canvasElement);
-                canvasElementInstance.get(0).width = maskPosition.width * canvasZoomValue;
-                canvasElementInstance.get(0).height = maskPosition.height * canvasZoomValue;
-                var contextCanvasBirthDate = canvasElementInstance.get(0).getContext('2d');
+                canvasElementInstance.get(0).width =
+                    maskPosition.width * canvasZoomValue;
+                canvasElementInstance.get(0).height =
+                    maskPosition.height * canvasZoomValue;
+                var contextCanvasBirthDate = (canvasElementInstance.get(0)).getContext("2d");
                 contextCanvasBirthDate.drawImage(videoElementInstance.get(0), maskPosition.left, maskPosition.top, maskPosition.width, maskPosition.height, 0, 0, maskPosition.width * canvasZoomValue, maskPosition.height * canvasZoomValue);
                 return canvasElementInstance.get(0);
             };
@@ -24712,6 +25124,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var Avs;
 (function (Avs) {
     var Plugin;
@@ -24725,286 +25148,399 @@ var Avs;
                     function Tesseract(config, event, api) {
                         var _a;
                         var _this = _super.call(this, config, event, api) || this;
+                        _this.lastFailure = null;
+                        _this.activeFailure = null;
+                        _this.progressStatus = "";
+                        _this.progressBucket = -1;
                         _this.config = config;
                         _this.api = api;
                         _this.monthNameLanguage = Tesseract.MONTH_NAME_LANGUAGE_FR;
                         _this.monthNameList = (_a = {},
                             _a[Tesseract.MONTH_NAME_LANGUAGE_FR] = {
-                                '01': 'janv',
-                                '02': 'févr',
-                                '03': 'mars',
-                                '04': 'avril',
-                                '05': 'mai',
-                                '06': 'juin',
-                                '07': 'juil',
-                                '08': 'août',
-                                '09': 'sept',
-                                '10': 'oct',
-                                '11': 'nov',
-                                '12': 'déc',
+                                "01": "janv",
+                                "02": "févr",
+                                "03": "mars",
+                                "04": "avril",
+                                "05": "mai",
+                                "06": "juin",
+                                "07": "juil",
+                                "08": "août",
+                                "09": "sept",
+                                "10": "oct",
+                                "11": "nov",
+                                "12": "déc",
                             },
                             _a[Tesseract.MONTH_NAME_LANGUAGE_EN] = {
-                                '01': 'jan',
-                                '02': 'feb',
-                                '03': 'mar',
-                                '04': 'apr',
-                                '05': 'may',
-                                '06': 'jun',
-                                '07': 'jul',
-                                '08': 'aug',
-                                '09': 'sept',
-                                '10': 'oct',
-                                '11': 'nov',
-                                '12': 'dec',
+                                "01": "jan",
+                                "02": "feb",
+                                "03": "mar",
+                                "04": "apr",
+                                "05": "may",
+                                "06": "jun",
+                                "07": "jul",
+                                "08": "aug",
+                                "09": "sept",
+                                "10": "oct",
+                                "11": "nov",
+                                "12": "dec",
                             },
                             _a[Tesseract.MONTH_NAME_LANGUAGE_BE] = {
-                                '01': 'jan',
-                                '02': 'feb',
-                                '03': 'maart',
-                                '04': 'apr',
-                                '05': 'mei',
-                                '06': 'juni',
-                                '07': 'juli',
-                                '08': 'aug',
-                                '09': 'sept',
-                                '10': 'oct',
-                                '11': 'nov',
-                                '12': 'dec',
+                                "01": "jan",
+                                "02": "feb",
+                                "03": "maart",
+                                "04": "apr",
+                                "05": "mei",
+                                "06": "juni",
+                                "07": "juli",
+                                "08": "aug",
+                                "09": "sept",
+                                "10": "oct",
+                                "11": "nov",
+                                "12": "dec",
                             },
                             _a[Tesseract.MONTH_NAME_LANGUAGE_NL] = {
-                                '01': 'jan',
-                                '02': 'feb',
-                                '03': 'maart',
-                                '04': 'apr',
-                                '05': 'mei',
-                                '06': 'juni',
-                                '07': 'juli',
-                                '08': 'aug',
-                                '09': 'sept',
-                                '10': 'oct',
-                                '11': 'nov',
-                                '12': 'dec',
+                                "01": "jan",
+                                "02": "feb",
+                                "03": "maart",
+                                "04": "apr",
+                                "05": "mei",
+                                "06": "juni",
+                                "07": "juli",
+                                "08": "aug",
+                                "09": "sept",
+                                "10": "oct",
+                                "11": "nov",
+                                "12": "dec",
                             },
                             _a[Tesseract.MONTH_NAME_LANGUAGE_EL] = {
-                                '01': 'ian',
-                                '02': 'phevr',
-                                '03': 'mart',
-                                '04': 'apr',
-                                '05': 'maios',
-                                '06': 'ioun',
-                                '07': 'ioul',
-                                '08': 'aug',
-                                '09': 'sept',
-                                '10': 'okt',
-                                '11': 'noem',
-                                '12': 'dek',
+                                "01": "ian",
+                                "02": "phevr",
+                                "03": "mart",
+                                "04": "apr",
+                                "05": "maios",
+                                "06": "ioun",
+                                "07": "ioul",
+                                "08": "aug",
+                                "09": "sept",
+                                "10": "okt",
+                                "11": "noem",
+                                "12": "dek",
                             },
                             _a);
-                        // TODO: load the library on demand
-                        if (typeof Tesseract === 'undefined') {
-                            _this.debug.error(25012, 'Required ocr library not loaded.');
-                            throw new Error('Required ocr library not loaded.');
-                        }
+                        Avs.Debug.DocumentDiagnostics.install();
+                        Avs.Debug.DocumentDiagnostics.emit("worker-create", "start");
                         _this.tesseractClass = window.Tesseract;
-                        _this.workerInstance = new _this.tesseractClass.createWorker({
-                            workerPath: _this.config.workerPath,
-                            langPath: _this.config.languagePath,
-                            corePath: _this.config.corePath,
-                            cacheMethod: 'refresh',
-                            logger: function (result) {
-                            },
-                        });
-                        _this.videoElement = $(_this.config.videoElementSelector).get(0);
+                        if (!_this.tesseractClass ||
+                            typeof _this.tesseractClass.createWorker !== "function") {
+                            _this.lastFailure = "LIBRARY_MISSING";
+                            Avs.Debug.DocumentDiagnostics.emit("worker-create", "failure", {}, _this.lastFailure);
+                        }
+                        else {
+                            try {
+                                _this.workerInstance = _this.tesseractClass.createWorker({
+                                    workerPath: _this.config.workerPath,
+                                    langPath: _this.config.languagePath,
+                                    corePath: _this.config.corePath,
+                                    cacheMethod: "refresh",
+                                    logger: function (result) { return _this.logProgress(result); },
+                                    errorHandler: function (error) {
+                                        if (_this.activeFailure)
+                                            _this.activeFailure(error);
+                                    },
+                                });
+                                // Tesseract 2 does not forward native Worker errors through errorHandler.
+                                if (_this.workerInstance.worker) {
+                                    _this.workerInstance.worker.addEventListener("error", function (event) {
+                                        event.preventDefault();
+                                        if (_this.activeFailure)
+                                            _this.activeFailure(event);
+                                        else {
+                                            _this.lastFailure =
+                                                Avs.Debug.DocumentDiagnostics.errorCode(event);
+                                            Avs.Debug.DocumentDiagnostics.emit("worker-create", "failure", {}, _this.lastFailure);
+                                        }
+                                    });
+                                }
+                                Avs.Debug.DocumentDiagnostics.emit("worker-create", "success");
+                            }
+                            catch (error) {
+                                _this.lastFailure =
+                                    Avs.Debug.DocumentDiagnostics.errorCode(error);
+                                Avs.Debug.DocumentDiagnostics.emit("worker-create", "failure", {}, _this.lastFailure);
+                            }
+                        }
+                        _this.videoElement = ($(_this.config.videoElementSelector).get(0));
                         _this.workerLoaded = false;
                         _this.languageLoaded = false;
                         _this.languageInit = false;
                         _this.workerConfigured = false;
                         return _this;
                     }
-                    Tesseract.prototype.setIdConfig = function (idConfig, cb) {
+                    Tesseract.prototype.setIdConfig = function (idConfig, cb, pageSegmentation) {
+                        if (pageSegmentation === void 0) { pageSegmentation = 6; }
                         this.config.idConfig = idConfig;
                         this.configureWorker(function (result) {
                             cb(result);
-                        });
+                        }, pageSegmentation);
                     };
                     Tesseract.prototype.isValidLanguage = function (language) {
-                        return language == Tesseract.LANGUAGE_EN || language == Tesseract.LANGUAGE_FR;
+                        return (language == Tesseract.LANGUAGE_EN ||
+                            language == Tesseract.LANGUAGE_FR);
+                    };
+                    Tesseract.prototype.logProgress = function (result) {
+                        var stages = {
+                            "loading tesseract core": "worker-load",
+                            "initializing tesseract": "worker-load",
+                            "loading language traineddata": "language-load",
+                            "initializing api": "language-init",
+                            "recognizing text": "ocr-recognize",
+                        };
+                        var stage = result && stages[result.status];
+                        if (!stage ||
+                            typeof result.progress !== "number" ||
+                            !isFinite(result.progress))
+                            return;
+                        var bucket = Math.floor(Math.max(0, Math.min(1, result.progress)) * 10) * 10;
+                        if (result.status === this.progressStatus &&
+                            bucket === this.progressBucket)
+                            return;
+                        this.progressStatus = result.status;
+                        this.progressBucket = bucket;
+                        Avs.Debug.DocumentDiagnostics.emit(stage, "progress", {
+                            progressPercent: bucket,
+                        });
+                    };
+                    Tesseract.prototype.fail = function (stage, code, cb) {
+                        this.lastFailure = code;
+                        Avs.Debug.DocumentDiagnostics.emit(stage, "failure", {}, code);
+                        cb(null);
+                    };
+                    Tesseract.prototype.runStage = function (stage, operation, cb, details) {
+                        var _this = this;
+                        if (details === void 0) { details = {}; }
+                        var started = Date.now();
+                        var finished = false;
+                        this.lastFailure = null;
+                        this.progressStatus = "";
+                        this.progressBucket = -1;
+                        Avs.Debug.DocumentDiagnostics.emit(stage, "start", details);
+                        var finish = function (success, value, code) {
+                            if (finished)
+                                return;
+                            finished = true;
+                            clearTimeout(timer);
+                            _this.activeFailure = null;
+                            if (!success)
+                                _this.lastFailure = code;
+                            Avs.Debug.DocumentDiagnostics.emit(stage, success ? "success" : "failure", __assign(__assign({}, details), { elapsedMs: Date.now() - started }), code);
+                            cb(success ? value : null);
+                        };
+                        var timer = setTimeout(function () {
+                            // A stuck worker cannot safely accept another job.
+                            _this.workerConfigured = false;
+                            try {
+                                _this.workerInstance.terminate();
+                            }
+                            catch (error) {
+                                /* Report the original timeout. */
+                            }
+                            finish(false, null, "TIMEOUT");
+                        }, 90000);
+                        this.activeFailure = function (error) {
+                            return finish(false, null, Avs.Debug.DocumentDiagnostics.errorCode(error));
+                        };
+                        var promise;
+                        try {
+                            promise = operation();
+                        }
+                        catch (error) {
+                            this.activeFailure(error);
+                            return;
+                        }
+                        Promise.resolve(promise).then(function (value) { return finish(true, value); }, function (error) {
+                            return finish(false, null, Avs.Debug.DocumentDiagnostics.errorCode(error));
+                        });
                     };
                     Tesseract.prototype.loadWorker = function (cb) {
                         var _this = this;
-                        this.workerInstance.load().then(function (result) {
-                            _this.workerLoaded = true;
-                            _this.debug.info('worker loaded');
-                            cb(true);
-                        }, function (error) {
-                            cb(null);
+                        if (!this.workerInstance || this.lastFailure) {
+                            this.fail("worker-load", this.lastFailure || "NOT_READY", cb);
+                            return;
+                        }
+                        this.runStage("worker-load", function () { return _this.workerInstance.load(); }, function (result) {
+                            _this.workerLoaded = result !== null;
+                            cb(_this.workerLoaded ? true : null);
                         });
                     };
                     Tesseract.prototype.loadLanguage = function (language, cb) {
                         var _this = this;
-                        // needs worker load
                         if (!this.workerLoaded) {
-                            this.debug.error(25020, 'Ocr worker was not loaded');
-                            cb(null);
+                            this.fail("language-load", "NOT_READY", cb);
                             return;
                         }
                         if (!this.isValidLanguage(language)) {
-                            this.debug.error(25021, 'Load request for invalid ocr language');
-                            cb(null);
+                            this.fail("language-load", "INVALID_CONFIG", cb);
                             return;
                         }
-                        this.workerInstance.loadLanguage(language).then(function (result) {
-                            _this.languageLoaded = true;
-                            _this.debug.info(language + ' language loaded');
-                            cb(true);
-                        }, function (error) {
-                            cb(null);
-                        });
+                        this.runStage("language-load", function () { return _this.workerInstance.loadLanguage(language); }, function (result) {
+                            _this.languageLoaded = result !== null;
+                            cb(_this.languageLoaded ? true : null);
+                        }, { language: language });
                     };
                     Tesseract.prototype.initLanguage = function (language, cb) {
                         var _this = this;
-                        // needs worker load
-                        if (!this.workerLoaded) {
-                            this.debug.error(25022, 'Ocr worker was not loaded');
-                            cb(null);
-                            return;
-                        }
-                        // needs language load
-                        if (!this.languageLoaded) {
-                            this.debug.error(25023, 'Ocr language was not loaded');
-                            cb(null);
+                        if (!this.workerLoaded || !this.languageLoaded) {
+                            this.fail("language-init", "NOT_READY", cb);
                             return;
                         }
                         if (!this.isValidLanguage(language)) {
-                            this.debug.error(25024, 'Initialization request for invalid tesseract language');
-                            cb(null);
+                            this.fail("language-init", "INVALID_CONFIG", cb);
                             return;
                         }
-                        this.workerInstance.initialize(language).then(function (result) {
-                            _this.languageInit = true;
-                            _this.debug.info(language + ' language initialized');
-                            cb(true);
-                        }, function (error) {
-                            cb(null);
+                        this.runStage("language-init", function () { return _this.workerInstance.initialize(language); }, function (result) {
+                            _this.languageInit = result !== null;
+                            cb(_this.languageInit ? true : null);
                         });
                     };
-                    Tesseract.prototype.configureWorker = function (cb) {
+                    Tesseract.prototype.configureWorker = function (cb, pageSegmentation) {
                         var _this = this;
-                        // needs worker load
-                        if (!this.workerLoaded) {
-                            this.debug.error(25025, 'Ocr worker was not loaded');
-                            cb(null);
+                        if (pageSegmentation === void 0) { pageSegmentation = 6; }
+                        this.workerConfigured = false;
+                        if (!this.workerLoaded ||
+                            !this.languageLoaded ||
+                            !this.languageInit) {
+                            this.fail("worker-configure", "NOT_READY", cb);
                             return;
                         }
-                        // needs language load
-                        if (!this.languageLoaded) {
-                            this.debug.error(25026, 'Ocr language was not loaded');
-                            cb(null);
+                        if (!this.config.idConfig ||
+                            !this.config.idConfig.tesseractConfig) {
+                            this.fail("worker-configure", "INVALID_CONFIG", cb);
                             return;
                         }
-                        // needs language init
-                        if (!this.languageInit) {
-                            this.debug.error(25027, 'Ocr language was not initialized');
-                            cb(null);
-                            return;
-                        }
-                        this.workerInstance.setParameters(this.config.idConfig.tesseractConfig).then(function (result) {
-                            _this.workerConfigured = true;
-                            _this.debug.info('worker configured');
-                            cb(true);
-                        }, function (error) {
-                            cb(null);
+                        var selectedSegmentation = this.config.idConfig.tesseractConfig.tessedit_pageseg_mode !==
+                            undefined
+                            ? this.config.idConfig.tesseractConfig.tessedit_pageseg_mode
+                            : pageSegmentation;
+                        this.runStage("worker-configure", function () {
+                            return _this.workerInstance.setParameters(__assign(__assign({}, _this.config.idConfig.tesseractConfig), { tessedit_pageseg_mode: selectedSegmentation }));
+                        }, function (result) {
+                            _this.workerConfigured = result !== null;
+                            cb(_this.workerConfigured ? true : null);
+                        }, {
+                            pageSegmentation: selectedSegmentation,
+                            layoutYear: this.config.idConfig.year,
                         });
                     };
                     Tesseract.prototype.ocrImage = function (image, cb) {
                         var _this = this;
-                        // needs worker load
-                        if (!this.workerLoaded) {
-                            this.debug.error(25028, 'Ocr worker was not loaded');
-                            cb(null);
+                        if (!this.workerLoaded ||
+                            !this.languageLoaded ||
+                            !this.languageInit ||
+                            !this.workerConfigured) {
+                            this.fail("ocr-recognize", "NOT_READY", cb);
                             return;
                         }
-                        // needs language load
-                        if (!this.languageLoaded) {
-                            this.debug.error(25029, 'Ocr language was not loaded');
-                            cb(null);
-                            return;
-                        }
-                        // needs language init
-                        if (!this.languageInit) {
-                            this.debug.error(25030, 'Ocr language was not initialized');
-                            cb(null);
-                            return;
-                        }
-                        // needs worker config
-                        if (!this.workerConfigured) {
-                            this.debug.error(25031, 'Ocr worker was not configured');
-                            cb(null);
-                            return;
-                        }
-                        this.workerInstance.recognize(image).then(function (result) {
-                            _this.debug.info('ocr image');
-                            cb(result);
-                        }, function (error) {
-                            cb(null);
-                        });
+                        this.runStage("ocr-recognize", function () { return _this.workerInstance.recognize(image); }, cb);
                     };
                     Tesseract.prototype.extractInformationFromId = function (image, cb) {
                         var _this = this;
                         this.ocrImage(image, function (result) {
-                            var foundText = result.data.text.trim();
-                            if (_this.config.idConfig.stripWhiteSpace) {
-                                foundText = foundText.replace(/\s/g, '');
-                            }
-                            var findDate = null;
-                            _this.debug.logToContainer(foundText);
-                            _this.debug.logToContainer('<br/>');
-                            var ruleMatched = 0;
-                            for (var i = 0, j = _this.config.idConfig.textMatcherRule.length; i < j; i++) {
-                                var regexString = _this.config.idConfig.textMatcherRule[i];
-                                regexString = regexString.slice(1);
-                                regexString = regexString.slice(0, -3);
-                                _this.debug.logToContainer(regexString);
-                                _this.debug.logToContainer('<br/>');
-                                var regex = new RegExp(regexString, 'ig');
-                                findDate = regex.exec(foundText);
-                                if (findDate !== null) {
-                                    ruleMatched = i;
-                                    break;
-                                }
-                            }
-                            if (findDate === null) {
+                            // Preserve the original failure instead of dereferencing result.data on null.
+                            if (result === null && _this.lastFailure) {
                                 cb(null);
                                 return;
                             }
-                            if (_this.config.idConfig.monthNameLanguage) {
-                                _this.monthNameLanguage = _this.config.idConfig.monthNameLanguage;
+                            if (!result ||
+                                !result.data ||
+                                typeof result.data.text !== "string") {
+                                _this.fail("ocr-text", "INVALID_RESULT", cb);
+                                return;
                             }
-                            if (findDate.length >= 4) {
-                                var dateComponentsPosition = _this.config.idConfig.dateComponentsPosition[ruleMatched];
-                                var dayIndex = dateComponentsPosition.day;
-                                var monthIndex = dateComponentsPosition.month;
-                                var yearIndex = dateComponentsPosition.year;
-                                var day = _this.formatDay(findDate[dayIndex]);
-                                var month = _this.formatMonth(findDate[monthIndex]);
-                                var year = _this.formatYear(findDate[yearIndex]);
-                                var dateFoundString = year + '-' + month + '-' + day;
-                                var dateFound = Date.parse(dateFoundString);
-                                var dateNow = (+new Date());
-                                // 365.2425 = days in a year with leap day added
-                                var scanIdPersonYears = Math.floor(((dateNow - dateFound) / 1000 / 3600 / 24 / 365.2425));
-                                cb({
-                                    birthDate: dateFoundString,
-                                    age: scanIdPersonYears,
-                                });
-                            }
-                            else {
+                            var foundText = result.data.text.trim();
+                            if (_this.config.idConfig.stripWhiteSpace)
+                                foundText = foundText.replace(/\s/g, "");
+                            Avs.Debug.DocumentDiagnostics.emit("ocr-text", foundText ? "success" : "retry", { characterCount: foundText.length }, foundText ? undefined : "EMPTY_TEXT");
+                            if (!foundText) {
                                 cb(null);
+                                return;
                             }
+                            var config = _this.config.idConfig;
+                            var match = null;
+                            var ruleIndex = -1;
+                            Avs.Debug.DocumentDiagnostics.emit("date-match", "start", {
+                                ruleCount: config.textMatcherRule && config.textMatcherRule.length,
+                            });
+                            try {
+                                if (!config.textMatcherRule || !config.textMatcherRule.length)
+                                    throw new Error("Invalid rules");
+                                for (var i = 0; i < config.textMatcherRule.length; i++) {
+                                    var rule = config.textMatcherRule[i];
+                                    var end = rule.lastIndexOf("/");
+                                    if (rule[0] !== "/" || end < 1)
+                                        throw new Error("Invalid rule");
+                                    match = new RegExp(rule.slice(1, end), rule.slice(end + 1)).exec(foundText);
+                                    if (match) {
+                                        ruleIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+                            catch (error) {
+                                _this.fail("date-match", "INVALID_CONFIG", cb);
+                                return;
+                            }
+                            if (!match) {
+                                Avs.Debug.DocumentDiagnostics.emit("date-match", "retry", { ruleCount: config.textMatcherRule.length }, "NO_DATE_MATCH");
+                                cb(null);
+                                return;
+                            }
+                            Avs.Debug.DocumentDiagnostics.emit("date-match", "success", {
+                                ruleIndex: ruleIndex,
+                            });
+                            var positions = config.dateComponentsPosition &&
+                                config.dateComponentsPosition[ruleIndex];
+                            if (!positions ||
+                                typeof match[positions.day] !== "string" ||
+                                typeof match[positions.month] !== "string" ||
+                                typeof match[positions.year] !== "string") {
+                                _this.fail("date-parse", "INVALID_CONFIG", cb);
+                                return;
+                            }
+                            _this.monthNameLanguage =
+                                config.monthNameLanguage || Tesseract.MONTH_NAME_LANGUAGE_FR;
+                            if (!_this.monthNameList[_this.monthNameLanguage]) {
+                                _this.fail("date-parse", "INVALID_CONFIG", cb);
+                                return;
+                            }
+                            var day = _this.formatDay(match[positions.day]);
+                            var month = _this.formatMonth(match[positions.month]);
+                            var year = _this.formatYear(match[positions.year]);
+                            var dateString = year + "-" + month + "-" + day;
+                            var date = new Date(dateString);
+                            var now = new Date();
+                            if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString) ||
+                                !isFinite(date.getTime()) ||
+                                date.getUTCFullYear() !== Number(year) ||
+                                date.getUTCMonth() + 1 !== Number(month) ||
+                                date.getUTCDate() !== Number(day) ||
+                                date > now) {
+                                Avs.Debug.DocumentDiagnostics.emit("date-parse", "retry", { ruleIndex: ruleIndex }, "INVALID_DATE");
+                                cb(null);
+                                return;
+                            }
+                            var age = now.getUTCFullYear() - date.getUTCFullYear();
+                            if (now.getUTCMonth() < date.getUTCMonth() ||
+                                (now.getUTCMonth() === date.getUTCMonth() &&
+                                    now.getUTCDate() < date.getUTCDate()))
+                                age--;
+                            Avs.Debug.DocumentDiagnostics.emit("date-parse", "success", {
+                                ruleIndex: ruleIndex,
+                            });
+                            cb({ birthDate: dateString, age: age });
                         });
                     };
                     Tesseract.prototype.formatDay = function (day) {
-                        return day.length == 2 ? day : '0' + day;
+                        return day.length == 2 ? day : "0" + day;
                     };
                     Tesseract.prototype.formatMonth = function (month) {
                         month = month.toLowerCase();
@@ -25012,7 +25548,7 @@ var Avs;
                             month = month.replace(this.monthNameList[this.monthNameLanguage][i], i);
                             month = month.replace(this.monthNameList[this.monthNameLanguage][i].toUpperCase(), i);
                         }
-                        return month.length == 2 ? month : '0' + month;
+                        return month.length == 2 ? month : "0" + month;
                     };
                     Tesseract.prototype.formatYear = function (year) {
                         if (year.length == 4) {
@@ -25020,22 +25556,22 @@ var Avs;
                         }
                         if (year.length == 2) {
                             var currentYear = new Date().getFullYear().toString().substr(-2);
-                            if (year < currentYear) {
-                                year = '20' + year;
+                            if (year <= currentYear) {
+                                year = "20" + year;
                                 return year;
                             }
-                            year = '19' + year;
+                            year = "19" + year;
                             return year;
                         }
                         return 0;
                     };
-                    Tesseract.LANGUAGE_EN = 'eng';
-                    Tesseract.LANGUAGE_FR = 'fra';
-                    Tesseract.MONTH_NAME_LANGUAGE_FR = 'fr';
-                    Tesseract.MONTH_NAME_LANGUAGE_EN = 'en';
-                    Tesseract.MONTH_NAME_LANGUAGE_BE = 'be';
-                    Tesseract.MONTH_NAME_LANGUAGE_EL = 'el';
-                    Tesseract.MONTH_NAME_LANGUAGE_NL = 'nl';
+                    Tesseract.LANGUAGE_EN = "eng";
+                    Tesseract.LANGUAGE_FR = "fra";
+                    Tesseract.MONTH_NAME_LANGUAGE_FR = "fr";
+                    Tesseract.MONTH_NAME_LANGUAGE_EN = "en";
+                    Tesseract.MONTH_NAME_LANGUAGE_BE = "be";
+                    Tesseract.MONTH_NAME_LANGUAGE_EL = "el";
+                    Tesseract.MONTH_NAME_LANGUAGE_NL = "nl";
                     return Tesseract;
                 }(Avs.Plugin.Handler));
                 Ml.Tesseract = Tesseract;

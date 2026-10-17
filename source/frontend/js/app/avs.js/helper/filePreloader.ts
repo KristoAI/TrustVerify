@@ -1,14 +1,12 @@
 namespace Avs {
-
 	export namespace Helper {
-
 		export class FilePreloader {
-
-			static readonly ON_PRELOAD_EVENT = 'Avs.Helper.FilePreloader.onPreloadEvent';
+			static readonly ON_PRELOAD_EVENT =
+				"Avs.Helper.FilePreloader.onPreloadEvent";
 
 			static readonly FILE_STATUS_PRELOADING = 1;
-			static readonly FILE_STATUS_SUCCESS    = 2;
-			static readonly FILE_STATUS_ERROR      = 3;
+			static readonly FILE_STATUS_SUCCESS = 2;
+			static readonly FILE_STATUS_ERROR = 3;
 
 			public fileList: Array<string>;
 			public fileListInfo: IFileListInfo;
@@ -16,115 +14,147 @@ namespace Avs {
 			public event: Avs.Event.Listener;
 			public instanceIndex: string;
 
-			public constructor(fileList: Array<string>, event: Avs.Event.Listener, instanceIndex: string) {
-
-				this.fileList     = fileList;
+			public constructor(
+				fileList: Array<string>,
+				event: Avs.Event.Listener,
+				instanceIndex: string,
+			) {
+				this.fileList = fileList;
 				this.fileListInfo = {
 					total: {
 						progress: 0,
-						status  : FilePreloader.FILE_STATUS_PRELOADING,
-						error   : {
+						status: FilePreloader.FILE_STATUS_PRELOADING,
+						error: {
 							code: 0,
-							msg : ''
-						}
-					}
+							msg: "",
+						},
+					},
 				};
 
-				this.event         = event;
+				this.event = event;
 				this.instanceIndex = instanceIndex;
-
 			}
 
 			public startPreloading() {
-
 				for (let i = 0, j = this.fileList.length; i < j; i++) {
-
 					this.preloadFile(this.fileList[i]);
 					this.fileListInfo[this.fileList[i]] = {
 						progress: 0,
-						status  : FilePreloader.FILE_STATUS_PRELOADING,
-						error   : {
+						status: FilePreloader.FILE_STATUS_PRELOADING,
+						error: {
 							code: 0,
-							msg : ''
-						}
+							msg: "",
+						},
 					};
-
 				}
-
 			}
 
 			public preloadFile(fileUrl: string) {
+				const diagnosticAssets: { [key: string]: string } = {
+					"/static/js/appFiles/tjs/w.min.js": "ocr-worker",
+					"/static/js/appFiles/tjs/tscasm.js": "ocr-core",
+					"/static/js/appFiles/tjs/data/eng.traineddata.gz": "ocr-language-eng",
+					"/static/js/appFiles/tjs/data/fra.traineddata.gz": "ocr-language-fra",
+				};
+				const asset = diagnosticAssets[fileUrl];
+				const started = Date.now();
+				if (asset) {
+					Avs.Debug.DocumentDiagnostics.install();
+					Avs.Debug.DocumentDiagnostics.emit("asset-preload", "start", {
+						asset,
+					});
+				}
 
 				$.ajax({
-					type       : 'get',
-					dataType   : 'text',
-					url        : fileUrl,
-					async      : true,
+					type: "get",
+					dataType: "text",
+					url: fileUrl,
+					async: true,
 					processData: false,
-					success    : (data) => {
-
+					success: (data) => {
 						let parsedData: any;
 						try {
 							parsedData = JSON.parse(data);
-						}
-						catch (e) {
-						}
+						} catch (e) {}
 
-						if (typeof parsedData !== 'undefined' && typeof parsedData.error !== 'undefined') {
-							this.fileListInfo[fileUrl].status = FilePreloader.FILE_STATUS_ERROR;
-							this.fileListInfo[fileUrl].error  = parsedData.error;
-						}
-						else {
+						if (
+							typeof parsedData !== "undefined" &&
+							typeof parsedData.error !== "undefined"
+						) {
+							this.fileListInfo[fileUrl].status =
+								FilePreloader.FILE_STATUS_ERROR;
+							this.fileListInfo[fileUrl].error = parsedData.error;
+						} else {
 							this.fileListInfo[fileUrl].progress = 100;
-							this.fileListInfo[fileUrl].status   = FilePreloader.FILE_STATUS_SUCCESS;
+							this.fileListInfo[fileUrl].status =
+								FilePreloader.FILE_STATUS_SUCCESS;
 						}
 
+						if (asset) {
+							const failed =
+								this.fileListInfo[fileUrl].status ===
+								FilePreloader.FILE_STATUS_ERROR;
+							Avs.Debug.DocumentDiagnostics.emit(
+								"asset-preload",
+								failed ? "failure" : "success",
+								{ asset, elapsedMs: Date.now() - started },
+								failed ? "NETWORK_ERROR" : undefined,
+							);
+						}
 						this.triggerChange();
-
 					},
-					error      : (error: JQueryXHR, textStatus: string, errorThrown: string) => {
+					error: (
+						error: JQueryXHR,
+						textStatus: string,
+						errorThrown: string,
+					) => {
+						if (asset)
+							Avs.Debug.DocumentDiagnostics.emit(
+								"asset-preload",
+								"failure",
+								{
+									asset,
+									httpStatus: error.status,
+									elapsedMs: Date.now() - started,
+								},
+								"NETWORK_ERROR",
+							);
 
 						this.fileListInfo[fileUrl].status = FilePreloader.FILE_STATUS_ERROR;
-						this.fileListInfo[fileUrl].error  = {
+						this.fileListInfo[fileUrl].error = {
 							code: 25010,
-							msg: 'status: ' + textStatus + ' error: ' + errorThrown
+							msg: "status: " + textStatus + " error: " + errorThrown,
 						};
 
 						this.triggerChange();
-
 					},
-					xhr        : () => {
-
-						var xhr        = $.ajaxSettings.xhr();
+					xhr: () => {
+						var xhr = $.ajaxSettings.xhr();
 						xhr.onprogress = (e: ProgressEvent) => {
-
-							this.fileListInfo[fileUrl].progress = e.loaded / e.total * 100;
+							this.fileListInfo[fileUrl].progress = (e.loaded / e.total) * 100;
 							this.triggerChange();
-
 						};
 
 						return xhr;
-
-					}
+					},
 				});
-
 			}
 
 			public triggerChange() {
-
-				let fileListPreloadComplete  = true;
+				let fileListPreloadComplete = true;
 				let fileListTotalErrorNumber = 0;
-				let fileListProgressTotal    = 0;
-				let fileListPreloadStatus    = FilePreloader.FILE_STATUS_PRELOADING;
+				let fileListProgressTotal = 0;
+				let fileListPreloadStatus = FilePreloader.FILE_STATUS_PRELOADING;
 
 				for (let i in this.fileListInfo) {
-
-					if (i === 'total') {
+					if (i === "total") {
 						continue;
 					}
 
 					fileListProgressTotal += this.fileListInfo[i].progress;
-					if (this.fileListInfo[i].status === FilePreloader.FILE_STATUS_PRELOADING) {
+					if (
+						this.fileListInfo[i].status === FilePreloader.FILE_STATUS_PRELOADING
+					) {
 						fileListPreloadComplete = false;
 					}
 
@@ -132,45 +162,46 @@ namespace Avs {
 						this.fileListInfo.total.error = this.fileListInfo[i].error;
 						fileListTotalErrorNumber++;
 					}
-
 				}
 
 				fileListProgressTotal = fileListProgressTotal / this.fileList.length;
 				fileListProgressTotal = parseInt(<any>fileListProgressTotal);
 
 				if (fileListPreloadComplete) {
-					fileListPreloadStatus = fileListTotalErrorNumber == 0 ? FilePreloader.FILE_STATUS_SUCCESS : FilePreloader.FILE_STATUS_ERROR;
+					fileListPreloadStatus =
+						fileListTotalErrorNumber == 0
+							? FilePreloader.FILE_STATUS_SUCCESS
+							: FilePreloader.FILE_STATUS_ERROR;
 				}
 
 				this.fileListInfo.total.progress = fileListProgressTotal;
-				this.fileListInfo.total.status   = fileListPreloadStatus;
+				this.fileListInfo.total.status = fileListPreloadStatus;
 
-				this.event.emit(FilePreloader.ON_PRELOAD_EVENT + '.' + this.instanceIndex, this.fileListInfo);
-
+				this.event.emit(
+					FilePreloader.ON_PRELOAD_EVENT + "." + this.instanceIndex,
+					this.fileListInfo,
+				);
 			}
-
 		}
 
 		export interface IFileListInfo {
 			[key: string]: {
-				progress: number,
-				status: number,
+				progress: number;
+				status: number;
 				error: {
-					code: number,
-					msg: string
-				}
-			},
+					code: number;
+					msg: string;
+				};
+			};
 
 			total: {
-				progress: number,
-				status: number,
+				progress: number;
+				status: number;
 				error: {
-					code: number,
-					msg: string
-				}
-			}
+					code: number;
+					msg: string;
+				};
+			};
 		}
-
 	}
-
 }

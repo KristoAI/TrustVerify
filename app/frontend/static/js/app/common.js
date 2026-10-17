@@ -832,6 +832,7 @@ var AvsHome;
 var AvsToken;
 (function (AvsToken) {
     function main() {
+        AvsFactory.SelfieAgeDetectionPage.Config.MIN_ALLOWED_AVERAGE_AGE = Math.max(25, Number(Application.requiredAge || 18) + 7);
         AvsFactory.StartPage.Config.create({
             verificationVersion: Application.verificationVersion,
             partnerId: Application.p,

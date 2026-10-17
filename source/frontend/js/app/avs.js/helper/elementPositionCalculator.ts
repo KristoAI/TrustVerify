@@ -109,16 +109,10 @@ namespace Avs {
 
 			}
 
-			public static calculateBirthDateMaskPosition(faceCoordinates: Avs.Plugin.Library.Ml.IFaceCoordinates, idSizeConfig: Avs.Entity.IIdSizeItem) {
+			public static calculateBirthDateMaskPosition(faceCoordinates: Avs.Plugin.Library.Ml.IFaceCoordinates, idSizeConfig: Avs.Entity.IIdSizeItem, scaleAdjustment: number = 0) {
 
-				let faceDimensionRatio = faceCoordinates.width / idSizeConfig.faceArea.width;
-				// allow up to 20% random position
-				if (Math.random() > 0.5) {
-					faceDimensionRatio += faceDimensionRatio * Math.random() / 5;
-				}
-				else {
-					faceDimensionRatio -= faceDimensionRatio * Math.random() / 5;
-				}
+				// Stable first crop; callers may request a small, explicit retry adjustment.
+				const faceDimensionRatio = faceCoordinates.width / idSizeConfig.faceArea.width * (1 + scaleAdjustment);
 
 				return {
 					top         : faceCoordinates.top + (idSizeConfig.faceArea.birthDateAreaDistance.top * faceDimensionRatio),

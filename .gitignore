@@ -55,8 +55,16 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# dotenv environment variables and local cloud credentials
 .env
+.env.*
+!.env.example
+.aws/
+supabase/.temp/
 
 tmp/
 .DS_Store
+.local/
+coverage/
+test-results/
+dist/

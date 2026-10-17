@@ -13,6 +13,11 @@ namespace AvsFactory {
 				faceApiDetectorType = Avs.Plugin.Library.Ml.FaceApi.DETECTOR_TYPE_SSD_MOBILE_NET_V1;
 			}
 
+			// Use the document's configured language rather than forcing every document through French.
+			Config.TESSERACT_LANGUAGE = scanIdAgeVerificationEntity.getIdTypeConfig().monthNameLanguage === 'en'
+				? Avs.Plugin.Library.Ml.Tesseract.LANGUAGE_EN
+				: Avs.Plugin.Library.Ml.Tesseract.LANGUAGE_FR;
+
 			instance = new Avs.SelfieAgeDetectionPage({
 				debugLevel: Config.DEFAULT_DEBUG_LEVEL,
 				event     : {
