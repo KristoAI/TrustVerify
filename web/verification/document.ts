@@ -3,6 +3,7 @@ import { recordDiagnostic } from './diagnostics';
 import { hasConflictingBirthDates, parseBirthDate, type BirthDate, type DateOrder } from './dates';
 import { inspectMRZ } from './mrz';
 import { locateBirthDateRegion, type OCRWord } from './document-locator';
+import { createOCRReader, straighten, type OCRReader, type OCRResult } from './ocr';
 
 export type DocumentReadCode = 'INVALID_IMAGE' | 'OCR_UNAVAILABLE' | 'OCR_FAILED' | 'TIMEOUT' | 'DATE_UNREADABLE';
 export class DocumentReadError extends Error {
@@ -17,23 +18,12 @@ export class DocumentReadError extends Error {
   }
 }
 
-type OCRData = { text?: string; words?: OCRWord[]; [key: string]: unknown };
-type OCRResult = { data?: OCRData };
 // Release text and nested layout references, including late results after cancellation.
 function clearOCR(result: OCRResult) {
   if (!result?.data) return;
   for (const key of Object.keys(result.data)) delete result.data[key];
   result.data.text = '';
 }
-type OCRWorker = {
-  load(): Promise<unknown>;
-  loadLanguage(language: string): Promise<unknown>;
-  initialize(language: string): Promise<unknown>;
-  setParameters(parameters: Record<string, string | number>): Promise<unknown>;
-  recognize(image: HTMLCanvasElement): Promise<OCRResult>;
-  terminate(): Promise<unknown> | void;
-};
-type OCRLibrary = { createWorker(options: Record<string, unknown>): OCRWorker };
 type ReadOptions = {
   image: HTMLCanvasElement;
   crop?: NormalizedCrop;
@@ -47,8 +37,8 @@ export const OCR_TIMEOUT_MS = 90_000;
 // Two recognize calls total per read, including the focused retry.
 export const OCR_MAX_ATTEMPTS = 2;
 const profiles = [
-  { scale: 1, grayscale: false, contrast: 1, psm: '11' },
-  { scale: 2, grayscale: true, contrast: 1.25, psm: '6' },
+  { scale: 1, grayscale: false, contrast: 1 },
+  { scale: 2, grayscale: true, contrast: 1.25 },
 ] as const;
 
 function preparedImage(source: HTMLCanvasElement, crop: NormalizedCrop, profile: typeof profiles[number]): HTMLCanvasElement {
@@ -111,11 +101,11 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
   if (!image || !Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) || image.width <= 0 || image.height <= 0) throw new DocumentReadError('INVALID_IMAGE');
   const crop = options.crop ?? { x: 0, y: 0, width: 1, height: 1 };
   try { cropToPixels(crop, image.width, image.height); } catch { throw new DocumentReadError('INVALID_IMAGE'); }
+  // One Latin-script recognizer reads both supported document languages.
   const language = options.language ?? 'eng';
   if (!['eng', 'fra'].includes(language) || (dateOrder && !['MDY', 'DMY', 'YMD'].includes(dateOrder))) throw new DocumentReadError('OCR_FAILED');
-  const library = (window as unknown as { Tesseract?: OCRLibrary }).Tesseract;
-  if (!library?.createWorker) throw new DocumentReadError('OCR_UNAVAILABLE');
-  let worker: OCRWorker | undefined;
+  let reader: OCRReader;
+  try { reader = createOCRReader(); } catch { throw new DocumentReadError('OCR_UNAVAILABLE'); }
   let closed = false;
   let stop!: (reason: unknown) => void;
   const stopped = new Promise<never>((_, reject) => { stop = reject; });
@@ -134,18 +124,11 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
     report(stage);
     return Promise.race([operation(), stopped]);
   };
+  // A full image is levelled once, so located fields are cropped from the frame their
+  // word boxes describe. A selected region is levelled on its own.
+  let level: HTMLCanvasElement | null | undefined;
   try {
-    worker = library.createWorker({
-      workerPath: '/assets/vendor/tesseract/worker.min.js', corePath: '/assets/vendor/tesseract/tesseract-core.asm.js',
-      langPath: '/assets/models/ocr', workerBlobURL: false, gzip: true, cacheMethod: 'none',
-      logger: (event: { status?: string; progress?: number }) => {
-        if (event?.status === 'recognizing text' && Number.isFinite(event.progress)) report('recognizing', Math.max(0, Math.min(1, event.progress!)));
-      },
-      errorHandler: () => stop(new DocumentReadError('OCR_FAILED')),
-    });
-    await run('loading-reader', () => worker!.load());
-    await run('loading-language', () => worker!.loadLanguage(language));
-    await run('initializing-reader', () => worker!.initialize(language));
+    await run('loading-reader', () => reader.load());
     let focusedCrop: NormalizedCrop | undefined;
     let previousBirthDate: BirthDate | null = null;
     let sawInvalidMRZ = false;
@@ -154,12 +137,17 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
       if (signal?.aborted) throw new DOMException('Verification cancelled.', 'AbortError');
       report('preparing-image', index / OCR_MAX_ATTEMPTS);
       const profile = profiles[index];
-      const prepared = preparedImage(image, focusedCrop ?? crop, profile);
+      if (!options.crop && level === undefined) level = straighten(image);
+      let prepared = preparedImage(level ?? image, focusedCrop ?? crop, profile);
+      if (options.crop) {
+        const levelled = straighten(prepared);
+        if (levelled) { prepared.width = prepared.height = 0; prepared = levelled; }
+      }
       let result: OCRResult | undefined;
       try {
-        const psm = options.crop && index === 0 ? '7' : profile.psm;
-        await run('configuring-reader', () => worker!.setParameters({ tessedit_pageseg_mode: psm, preserve_interword_spaces: '1' }));
-        result = await run('recognizing', () => worker!.recognize(prepared).then(value => {
+        result = await run('recognizing', () => reader.recognize(prepared, progress => {
+          if (Number.isFinite(progress)) report('recognizing', Math.max(0, Math.min(1, progress)));
+        }).then(value => {
           if (closed || signal?.aborted) clearOCR(value);
           return value;
         }));
@@ -181,7 +169,7 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
         const located = !options.crop && hasLayout
           ? locateBirthDateRegion(words, prepared.width, prepared.height, dateOrder) : null;
         if (index === 0 && located) {
-          // Normalized full-image coordinates map directly back to original pixels.
+          // Normalized coordinates map directly back to the (levelled) full-image pixels.
           focusedCrop = located.crop;
           previousBirthDate = birthDate;
           recordDiagnostic('date-check', 'retry', { attempt: index + 1 });
@@ -214,8 +202,9 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
     throw new DocumentReadError('OCR_FAILED');
   } finally {
     closed = true;
+    if (level) level.width = level.height = 0;
     clearTimeout(timer);
     signal?.removeEventListener('abort', abort);
-    try { void Promise.resolve(worker?.terminate()).catch(() => {}); } catch { /* No private cleanup diagnostics. */ }
+    try { reader.terminate(); } catch { /* No private cleanup diagnostics. */ }
   }
 }

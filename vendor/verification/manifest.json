@@ -14,24 +14,6 @@
       "license": "Apache-2.0"
     },
     {
-      "path": "vendor/tesseract/tesseract.min.js",
-      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js",
-      "sha256": "ac5b57b256dbcbfdac61b1840a50b6090bc6003404e82abba1ef2125edc9e0ff",
-      "license": "Apache-2.0"
-    },
-    {
-      "path": "vendor/tesseract/worker.min.js",
-      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/worker.min.js",
-      "sha256": "3a793881610af9e8c3996ebbd82be23b8daa75ddfec79074ca60e49d2a11c2a6",
-      "license": "Apache-2.0"
-    },
-    {
-      "path": "vendor/tesseract/tesseract-core.asm.js",
-      "url": "https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/tesseract-core.asm.js",
-      "sha256": "74f5e06a95c3a6611575b180462549998350ace14e95bb98c6d3ea73d8f5faf7",
-      "license": "Apache-2.0"
-    },
-    {
       "path": "models/face/age_gender_model-shard1",
       "url": "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/age_gender_model-shard1",
       "sha256": "49f92bbc0afef2342c4385e4a2b0acb6d7a727c6f0aa539499719a81acf9abaa",
@@ -158,20 +140,6 @@
       "note": "Retained model under owner/counsel direction; see audit"
     },
     {
-      "path": "models/ocr/eng.traineddata.gz",
-      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/eng.traineddata.gz",
-      "sha256": "341ff75b44432480cf6cab965c3e7c23fae4de240dfb49fa9604e6008f95a708",
-      "license": "Apache-2.0",
-      "note": "OCR language data"
-    },
-    {
-      "path": "models/ocr/fra.traineddata.gz",
-      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/fra.traineddata.gz",
-      "sha256": "9f21d5a8728d7c48e1fd0ebc016689f262f268da33ae5b4e7071d127ff4eb52e",
-      "license": "Apache-2.0",
-      "note": "OCR language data"
-    },
-    {
       "path": "licenses/face-api-MIT.txt",
       "url": "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/LICENSE",
       "sha256": "9a3442b79acaf4fbc7c2e07b7e2d8f84af9bb3871bf08a69d80304ab00640e9a",
@@ -190,28 +158,68 @@
       "license": "Apache-2.0"
     },
     {
-      "path": "licenses/Tesseract-Apache-2.0.txt",
-      "url": "https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/LICENSE.md",
-      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
-      "license": "Apache-2.0"
-    },
-    {
-      "path": "licenses/Tesseract-core-Apache-2.0.txt",
-      "url": "https://cdn.jsdelivr.net/npm/tesseract.js-core@2.2.0/LICENSE",
-      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
-      "license": "Apache-2.0"
-    },
-    {
-      "path": "licenses/OCR-data-Apache-2.0.txt",
-      "url": "https://raw.githubusercontent.com/naptha/tessdata/gh-pages/LICENSE",
-      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-      "license": "Apache-2.0"
-    },
-    {
       "path": "licenses/undici-types-MIT.txt",
       "url": "https://raw.githubusercontent.com/nodejs/undici/v5.26.5/LICENSE",
       "sha256": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27",
       "license": "MIT"
+    },
+    {
+      "path": "vendor/onnxruntime/ort.wasm.min.js",
+      "url": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.wasm.min.js",
+      "sha256": "faece07e84faa9001f5104bbe4e5c70861d06cb2376a0dea1fa0ad33a67adc81",
+      "license": "MIT"
+    },
+    {
+      "path": "vendor/onnxruntime/ort-wasm-simd-threaded.mjs",
+      "url": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort-wasm-simd-threaded.mjs",
+      "sha256": "e13f7f94fc51b4ca72b12faeb1ee95f4ace6dfbc8939bc718aabdc0a27c4299b",
+      "license": "MIT"
+    },
+    {
+      "path": "vendor/onnxruntime/ort-wasm-simd-threaded.wasm",
+      "url": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort-wasm-simd-threaded.wasm",
+      "sha256": "3398c10d07d229bd91b364548e130e0e51a8e5704b88c7c083ebbeb78842dee2",
+      "license": "MIT"
+    },
+    {
+      "path": "models/indra/det.onnx",
+      "url": "https://huggingface.co/datalab-to/indra-ocr/resolve/bd02167fdf2005a19962cc15188f8496a2c87d3b/det.onnx",
+      "sha256": "f2bd4cba23e9c328cf7ec824634e423e191a2c6aacbbf35c62bd79dd70f62f59",
+      "license": "OpenRAIL-M (modified)",
+      "note": "Indra OCR v1.1.0 weights (pinned commit); modified OpenRAIL-M, see docs/LICENSE_AUDIT.md"
+    },
+    {
+      "path": "models/indra/rec.onnx",
+      "url": "https://huggingface.co/datalab-to/indra-ocr/resolve/bd02167fdf2005a19962cc15188f8496a2c87d3b/rec.onnx",
+      "sha256": "475972a2710be4a3cbfeb2bc7f3624ffd563de07de42476fc7a290d4e1ece484",
+      "license": "OpenRAIL-M (modified)",
+      "note": "Indra OCR v1.1.0 weights (pinned commit); modified OpenRAIL-M, see docs/LICENSE_AUDIT.md"
+    },
+    {
+      "path": "models/indra/meta.json",
+      "url": "https://huggingface.co/datalab-to/indra-ocr/resolve/bd02167fdf2005a19962cc15188f8496a2c87d3b/meta.json",
+      "sha256": "4ce4c94b46f5d644033c02e718322014ff4081270f385038c571912b56696339",
+      "license": "OpenRAIL-M (modified)",
+      "note": "Indra OCR v1.1.0 weights (pinned commit); modified OpenRAIL-M, see docs/LICENSE_AUDIT.md"
+    },
+    {
+      "path": "licenses/onnxruntime-MIT.txt",
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/LICENSE",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "license": "MIT"
+    },
+    {
+      "path": "licenses/Indra-OCR-code-Apache-2.0.txt",
+      "url": "https://raw.githubusercontent.com/datalab-to/indra/v1.1.1/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "licenses/Indra-OCR-weights-OpenRAIL-M.txt",
+      "url": "https://huggingface.co/datalab-to/indra-ocr/resolve/bd02167fdf2005a19962cc15188f8496a2c87d3b/LICENSE",
+      "sha256": "50c88a018a7ee322e89f6b09401b237beb0cd331685879405b3db48993950a5f",
+      "license": "OpenRAIL-M (modified)",
+      "note": "Indra OCR v1.1.0 weights (pinned commit); modified OpenRAIL-M, see docs/LICENSE_AUDIT.md"
     }
   ]
 }

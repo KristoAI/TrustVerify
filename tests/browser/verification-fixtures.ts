@@ -1,4 +1,6 @@
 import { readDocument } from '../../web/verification/document';
+import { createOCRReader } from '../../web/verification/ocr';
+import { clearDiagnostics, diagnosticReport } from '../../web/verification/diagnostics';
 import { inspectFaces } from '../../web/verification/face';
 import QRCode from 'qrcode';
 const status = document.querySelector<HTMLElement>('#status')!;
@@ -49,17 +51,10 @@ document.querySelector<HTMLButtonElement>('#qr')!.onclick=async()=>{
 };
 
 document.querySelector<HTMLButtonElement>('#mrz')!.onclick=async function(){
-  this.disabled=true;status.textContent='Reading synthetic ICAO MRZ with the real OCR worker';
+  this.disabled=true;status.textContent='Reading synthetic ICAO MRZ with the real OCR reader';
   let diagnostics=document.querySelector<HTMLPreElement>('#mrz-diagnostics');
   if(!diagnostics){diagnostics=document.createElement('pre');diagnostics.id='mrz-diagnostics';canvas.after(diagnostics);}
-  diagnostics.textContent='Synthetic fixture OCR diagnostics (not production document data):\n';
-  const tesseract=(window as any).Tesseract;
-  const originalCreate=tesseract.createWorker;
-  tesseract.createWorker=(options:unknown)=>{
-    const worker=originalCreate(options);const recognize=worker.recognize.bind(worker);
-    worker.recognize=async(...args:unknown[])=>{const result=await recognize(...args);diagnostics!.textContent+=JSON.stringify(result.data?.text)+'\n';return result;};
-    return worker;
-  };
+  diagnostics.textContent='Synthetic fixture OCR text (not production document data):\n';
   try {
     canvas.width=1400;canvas.height=240;
     const context=canvas.getContext('2d')!;
@@ -67,10 +62,12 @@ document.querySelector<HTMLButtonElement>('#mrz')!.onclick=async function(){
     context.fillStyle='#000';context.font='42px monospace';
     context.fillText('PPUTOERIKSSON<<ANNA<MARIA'.padEnd(44,'<'),40,95);
     context.fillText('L898902C36UTO7408122F3404159ZE184226B<<<<<16',40,165);
+    const reader=createOCRReader();
+    try { await reader.load(); diagnostics.textContent+=JSON.stringify((await reader.recognize(canvas)).data?.text)+'\n'; } finally { reader.terminate(); }
     const result=await readDocument({image:canvas,language:'eng',dateOrder:'DMY'});
     status.textContent=result.source==='mrz' && result.birthDate.year===1974 && result.birthDate.month===8 && result.birthDate.day===12 ? 'PASS: real OCR and checked MRZ returned synthetic 1974-08-12' : 'FAIL: MRZ fixture result mismatch';
   }catch(error){status.textContent='FAIL: '+(error instanceof Error?error.message:'MRZ fixture failure');}
-  finally{tesseract.createWorker=originalCreate;this.disabled=false;}
+  finally{this.disabled=false;}
 };
 
 
@@ -78,21 +75,40 @@ document.querySelector<HTMLButtonElement>('#mrz')!.onclick=async function(){
 document.querySelector<HTMLButtonElement>('#spatial-ocr')!.onclick = async function() {
   this.disabled = true;
   status.textContent = 'Reading a synthetic card with DOB and issue date in separate columns';
-  const tesseract = (window as any).Tesseract;
-  const originalCreate = tesseract.createWorker;
-  const calls: Array<{width:number;height:number}> = [];
-  tesseract.createWorker = (options: unknown) => {
-    const worker = originalCreate(options);
-    const recognize = worker.recognize.bind(worker);
-    worker.recognize = async (image: HTMLCanvasElement) => {
-      calls.push({ width: image.width, height: image.height });
-      return recognize(image);
-    };
-    return worker;
-  };
+  clearDiagnostics();
   try {
-    canvas.width = 1200; canvas.height = 760;
-    const c = canvas.getContext('2d')!;
+    drawCard(0);
+    const result = await readDocument({ image: canvas, language: 'eng', dateOrder: 'MDY' });
+    if (result.birthDate.year !== 1988 || result.birthDate.month !== 8 || result.birthDate.day !== 24 || result.source !== 'label') throw new Error('Wrong synthetic DOB field');
+    const attempts = diagnosticReport().split('\n').filter(line => line.includes('"preparing-image"') && line.includes('"start"') && line.includes('"attempt"'));
+    if (attempts.length !== 2 || !diagnosticReport().includes('"date-check","status":"retry"')) throw new Error('Expected one focused reread');
+    status.textContent = 'PASS: real OCR located the DOB column and reread its crop in exactly 2 attempts; issue and expiry dates excluded';
+  } catch(error) { status.textContent = 'FAIL: ' + (error instanceof Error ? error.message : 'Synthetic OCR error'); }
+  finally { this.disabled = false; }
+};
+
+// The same synthetic card photographed at an angle: the reader levels it before locating fields.
+document.querySelector<HTMLButtonElement>('#tilted-ocr')!.onclick = async function() {
+  this.disabled = true;
+  try {
+    for (const degrees of [4, 10]) {
+      status.textContent = `Reading the synthetic card tilted ${degrees} degrees`;
+      drawCard(degrees);
+      const result = await readDocument({ image: canvas, language: 'eng', dateOrder: 'MDY' });
+      if (result.birthDate.year !== 1988 || result.birthDate.month !== 8 || result.birthDate.day !== 24 || result.source !== 'label') throw new Error(`Wrong DOB at ${degrees} degrees`);
+    }
+    status.textContent = 'PASS: real OCR levelled 4 and 10 degree tilted cards and read the DOB field';
+  } catch(error) { status.textContent = 'FAIL: ' + (error instanceof Error ? error.message : 'Synthetic OCR error'); }
+  finally { this.disabled = false; }
+};
+
+function drawCard(degrees: number) {
+  canvas.width = 1200; canvas.height = 760;
+  const c = canvas.getContext('2d')!;
+  c.fillStyle = '#d9d4ca'; c.fillRect(0, 0, 1200, 760);
+  c.save(); c.translate(600, 380); c.rotate(-degrees * Math.PI / 180); c.translate(-600, -380);
+  c.scale(.82, .82); c.translate(130, 80);
+  {
     c.fillStyle = '#ece8df'; c.fillRect(0, 0, 1200, 760);
     c.fillStyle = '#172629'; c.font = '40px Arial';
     c.fillText('SYNTHETIC DOCUMENT - TEST ONLY', 65, 95);
@@ -101,10 +117,6 @@ document.querySelector<HTMLButtonElement>('#spatial-ocr')!.onclick = async funct
     c.font = '40px Arial';
     c.fillText('08/24/1988', 100, 380); c.fillText('01/02/2020', 690, 380);
     c.font = '30px Arial'; c.fillText('EXP 08/24/2030', 690, 600);
-    const result = await readDocument({ image: canvas, language: 'eng', dateOrder: 'MDY' });
-    if (result.birthDate.year !== 1988 || result.birthDate.month !== 8 || result.birthDate.day !== 24 || result.source !== 'label') throw new Error('Wrong synthetic DOB field');
-    if (calls.length !== 2 || calls[1].width >= calls[0].width || calls[1].height >= calls[0].height) throw new Error('Expected one focused reread');
-    status.textContent = 'PASS: real OCR located the DOB column and reread its crop in exactly 2 attempts; issue and expiry dates excluded';
-  } catch(error) { status.textContent = 'FAIL: ' + (error instanceof Error ? error.message : 'Synthetic OCR error'); }
-  finally { tesseract.createWorker = originalCreate; this.disabled = false; }
-};
+  }
+  c.restore();
+}

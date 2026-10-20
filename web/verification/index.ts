@@ -284,7 +284,7 @@ async function extractDate(signal: AbortSignal, crop?: Selection) {
         if (stage === 'preparing-image') {
           readingAttempt = progress && progress >= 0.5 ? 2 : 1;
           view.status.textContent = crop ? 'Preparing your selected birth-date area…' : `Reading attempt ${readingAttempt} of 2: locating the birth date…`;
-        } else if (stage === 'recognizing text' || stage === 'recognizing') view.status.textContent = `Reading attempt ${readingAttempt} of 2${progress === undefined ? '…' : `: ${Math.round(progress * 100)}%`}`;
+        } else if (stage === 'recognizing') view.status.textContent = `Reading attempt ${readingAttempt} of 2${progress === undefined ? '…' : `: ${Math.round(progress * 100)}%`}`;
         else view.status.textContent = 'Preparing the private document reader…';
       },
     });

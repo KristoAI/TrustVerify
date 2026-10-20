@@ -2,7 +2,7 @@
 
 ## Independent-engine update — September 19, 2026
 
-The new candidate uses `web/verification/diagnostics.ts`. In browser developer tools, `TrustBunnyDiagnostics.report()` returns at most 256 allowlisted stage/status/count entries held in memory. A new attempt clears them. Raw OCR text, DOB, images, descriptors, tokens and arbitrary exception messages are excluded. The reader exposes bounded worker stages, preprocessing attempts, date retries and final status; it does not upload this report. See [implementation status](REWORK_STATUS.md) and [document coverage](DOCUMENT_COVERAGE.md) for current validation limits.
+The new candidate uses `web/verification/diagnostics.ts`. In browser developer tools, `TrustBunnyDiagnostics.report()` returns at most 256 allowlisted stage/status/count entries held in memory. A new attempt clears them. Raw OCR text, DOB, images, descriptors, tokens and arbitrary exception messages are excluded. The reader exposes `loading-reader`, `preparing-image` (per attempt), `recognizing` progress, `date-check` retries and the final `document-result`; it does not upload this report. Since the October 19, 2026 switch to Indra OCR there are no separate language-loading or segmentation-configuration stages. See [implementation status](REWORK_STATUS.md) and [document coverage](DOCUMENT_COVERAGE.md) for current validation limits.
 
 The remaining sections record the historical Go.Cam engine's troubleshooting and validation. Its `Avs.*` commands and file paths are not active in the independent candidate.
 

@@ -1,5 +1,5 @@
 // Local, bounded diagnostics contain stages/counts only, never verification inputs.
-const stages = new Set(['loading-reader', 'loading-language', 'initializing-reader', 'preparing-image', 'configuring-reader', 'recognizing', 'date-check', 'document-result']);
+const stages = new Set(['loading-reader', 'preparing-image', 'recognizing', 'date-check', 'document-result']);
 const statuses = new Set(['start', 'progress', 'retry', 'success', 'failure', 'cancelled']);
 const codes = new Set(['INVALID_IMAGE', 'OCR_UNAVAILABLE', 'OCR_FAILED', 'TIMEOUT', 'DATE_UNREADABLE']);
 const entries: Array<Record<string, string | number>> = [];

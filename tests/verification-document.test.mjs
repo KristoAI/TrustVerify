@@ -2,8 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { build } from 'esbuild';
 
+// The ONNX reader is replaced by a synthetic one; tests/browser covers real OCR.
+const syntheticReader = { name: 'synthetic-ocr-reader', setup(builder) {
+  builder.onResolve({ filter: /^\.\/ocr$/ }, () => ({ path: 'ocr', namespace: 'synthetic-ocr' }));
+  builder.onLoad({ filter: /.*/, namespace: 'synthetic-ocr' }, () => ({ contents: 'export function createOCRReader() { return globalThis.__ocrFixture.create(); } export function straighten() { return null; }', loader: 'js' }));
+} };
 async function loadModule(path) {
-  const result = await build({ entryPoints: [path], bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022' });
+  const result = await build({ entryPoints: [path], bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', plugins: [syntheticReader] });
   return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
 }
 const { parseBirthDate, ageOnDate, meetsRequiredAge, isValidBirthDate } = await loadModule('web/verification/dates.ts');
@@ -137,12 +142,13 @@ function browserFixture(t, overrides = {}) {
   const canvases = [];
   const calls = [];
   const results = [];
-  let workerOptions;
+  let created = 0;
+  let progress;
   let terminated = 0;
   let recognized = 0;
   const worker = {
-    async load() {}, async loadLanguage() {}, async initialize() {}, async setParameters() {},
-    async recognize() { recognized++; const result = { data: { text: 'DOB 2000-09-19' } }; results.push(result); return result; },
+    async load() {},
+    async recognize(image, onProgress) { progress = onProgress; recognized++; const result = { data: { text: 'DOB 2000-09-19' } }; results.push(result); return result; },
     terminate() { terminated++; }, ...overrides,
   };
   const fakeDocument = {
@@ -156,10 +162,11 @@ function browserFixture(t, overrides = {}) {
     },
   };
   const oldWindow = globalThis.window, oldDocument = globalThis.document;
-  globalThis.window = { Tesseract: { createWorker(options) { workerOptions = options; return worker; } } };
+  globalThis.window = {};
   globalThis.document = fakeDocument;
-  t.after(() => { globalThis.window = oldWindow; globalThis.document = oldDocument; });
-  return { image: { width: 100, height: 60 }, worker, canvases, calls, results, get options() { return workerOptions; }, get terminated() { return terminated; }, get recognized() { return recognized; } };
+  globalThis.__ocrFixture = { create() { created++; return worker; } };
+  t.after(() => { globalThis.window = oldWindow; globalThis.document = oldDocument; delete globalThis.__ocrFixture; });
+  return { image: { width: 100, height: 60 }, worker, canvases, calls, results, get created() { return created; }, get progress() { return progress; }, get terminated() { return terminated; }, get recognized() { return recognized; } };
 }
 
 test('reader uses local assets, returns only DOB, wipes temporary canvases and terminates', async t => {
@@ -170,12 +177,10 @@ test('reader uses local assets, returns only DOB, wipes temporary canvases and t
   assert.equal(fixture.recognized, 1);
   assert.equal(fixture.results[0].data.text, '');
   assert.ok(fixture.canvases.every(canvas => canvas.width === 0 && canvas.height === 0));
-  assert.equal(fixture.options.langPath, '/assets/models/ocr');
-  assert.equal(fixture.options.cacheMethod, 'none');
-  assert.equal(fixture.options.workerBlobURL, false);
+  assert.equal(fixture.created, 1);
   assert.ok(!JSON.stringify(progress).includes('2000'));
   const count = progress.length;
-  fixture.options.logger({ status: 'recognizing text', progress: .9 });
+  fixture.progress(.9);
   assert.equal(progress.length, count, 'late progress is ignored');
 });
 
@@ -212,8 +217,8 @@ test('full-image OCR rejects conflicting printed DOB/MRZ and selected crops neve
   await assert.rejects(readDocument({ image: fixture.image, crop: { x: 0, y: 0, width: 1, height: 1 } }), { code: 'DATE_UNREADABLE' });
 });
 
-test('worker failures produce fixed messages with no exception data', async t => {
-  const fixture = browserFixture(t, { async initialize() { throw new Error('private OCR text 2000-01-01'); } });
+test('reader failures produce fixed messages with no exception data', async t => {
+  const fixture = browserFixture(t, { async load() { throw new Error('private OCR text 2000-01-01'); } });
   await assert.rejects(readDocument({ image: fixture.image }), error => error.code === 'OCR_FAILED' && !error.message.includes('2000'));
   assert.equal(fixture.terminated, 1);
 });
@@ -230,7 +235,7 @@ test('abort terminates stalled recognition and late OCR cannot complete the flow
   assert.equal(fixture.terminated, 1);
 });
 
-test('reader timeout terminates a stalled worker rather than waiting forever', async t => {
+test('reader timeout terminates a stalled reader rather than waiting forever', async t => {
   const fixture = browserFixture(t, { load() { return new Promise(() => {}); } });
   const previous = globalThis.setTimeout;
   globalThis.setTimeout = (callback, delay) => { assert.equal(delay, OCR_TIMEOUT_MS); queueMicrotask(callback); return 0; };
@@ -239,12 +244,12 @@ test('reader timeout terminates a stalled worker rather than waiting forever', a
   assert.equal(fixture.terminated, 1);
 });
 
-test('pre-cancelled input starts no worker, and invalid crops do not start OCR', async t => {
+test('pre-cancelled input starts no reader, and invalid crops do not start OCR', async t => {
   const fixture = browserFixture(t);
   const controller = new AbortController(); controller.abort();
   await assert.rejects(readDocument({ image: fixture.image, signal: controller.signal }), { name: 'AbortError' });
   await assert.rejects(readDocument({ image: fixture.image, crop: { x: 2, y: 0, width: 1, height: 1 } }), { code: 'INVALID_IMAGE' });
-  assert.equal(fixture.options, undefined);
+  assert.equal(fixture.created, 0);
 });
 
 const layoutWords = () => [

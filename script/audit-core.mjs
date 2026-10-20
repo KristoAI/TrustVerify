@@ -7,6 +7,8 @@ export async function auditCore() {
   const lock = JSON.parse(await fs.readFile("package-lock.json", "utf8"));
   const installed = new Map(JSON.parse(await fs.readFile("dist/dependency-inventory.json", "utf8")).map(p => [p.path, p]));
   const allowed = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD"]);
+  // Model-weight terms approved by the owner (see docs/LICENSE_AUDIT.md); not a dependency license.
+  const allowedVendor = new Set([...allowed, "OpenRAIL-M (modified)"]);
   for (const [name, info] of Object.entries(lock.packages)) {
     if (!name) continue; // The historical root license is a separate release decision.
     const current = installed.get(name);
@@ -22,7 +24,7 @@ export async function auditCore() {
     const bytes = await fs.readFile(`dist/assets/${entry.path}`);
     if (createHash("sha256").update(bytes).digest("hex") !== entry.sha256)
       problems.push(`Changed vendor artifact: ${entry.path}`);
-    if (!allowed.has(entry.license)) problems.push(`Unreviewed vendor license: ${entry.path}`);
+    if (!allowedVendor.has(entry.license)) problems.push(`Unreviewed vendor license: ${entry.path}`);
   }
   const files = [];
   async function walk(folder) {

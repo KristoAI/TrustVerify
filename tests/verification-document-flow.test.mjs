@@ -5,7 +5,7 @@ import { build } from 'esbuild';
 
 // Run the production page entry, UI, document worker orchestration, date parser,
 // age policy and result transport. Only hardware/inference/continuation are replaced.
-// The OCR worker returns synthetic text; these are journey tests, not optical-accuracy tests.
+// The OCR reader returns synthetic text; these are journey tests, not optical-accuracy tests.
 const replacements = {
   camera: `
     const fixture = window.__flowFixture;
@@ -25,6 +25,17 @@ const replacements = {
     export async function inspectFaces() { window.__flowFixture.faceInspections++; throw new Error('Document path must not inspect faces'); }
     export async function matchDocumentFace() { window.__flowFixture.faceInspections++; throw new Error('Document path must not compare portraits'); }
   `,
+  ocr: `
+    export function straighten() { return null; }
+    export function createOCRReader() {
+      const fixture = window.__flowFixture;
+      return {
+        async load() { fixture.readerLoads++; },
+        async recognize(image) { fixture.recognizedImages.push(image); const text = fixture.text; return { data: { text: Array.isArray(text) ? text[Math.min(fixture.recognizedImages.length - 1, text.length - 1)] : text } }; },
+        terminate() { fixture.terminated++; },
+      };
+    }
+  `,
   selfie: `
     export async function collectSelfie() { const f=window.__flowFixture; f.selfies++; return { estimate:f.estimate }; }
   `,
@@ -41,7 +52,7 @@ const replacements = {
 const bundle = await build({
   entryPoints: ['web/verification/index.ts'], bundle: true, write: false, format: 'iife', platform: 'browser', target: 'es2022',
   plugins: [{ name: 'synthetic-document-hardware', setup(builder) {
-    builder.onResolve({ filter: /^\.\/(camera|face|selfie|continuation)$/ }, args => ({ path: args.path.slice(2), namespace: 'flow-fixture' }));
+    builder.onResolve({ filter: /^\.\/(camera|face|selfie|continuation|ocr)$/ }, args => ({ path: args.path.slice(2), namespace: 'flow-fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'flow-fixture' }, args => ({ contents: replacements[args.path], loader: 'js' }));
   } }],
 });
@@ -77,7 +88,7 @@ class Element {
 
 async function fixture(t, { methods = ['document'], text = '3 DOB 08/24/1988\n4a ISS 01/02/2020\n4b EXP 08/24/2030', estimate = 24, denyCamera = false, initialMethod, qualityWhite = false } = {}) {
   const state = { modelLoads: 0, faceInspections: 0, selfies: 0, captures: 0, uploads: 0, switches: 0, stops: 0, terminated: 0,
-    estimate, denyCamera, qualityWhite, cameras: [], images: [], submissions: [], navigations: [], workerLanguages: [], recognizedImages: [] };
+    estimate, denyCamera, qualityWhite, cameras: [], images: [], submissions: [], navigations: [], readerLoads: 0, text, recognizedImages: [] };
   const root = new Element('main');
   const config = new Element('script');
   config.textContent = JSON.stringify({ mode: 'desktop', sessionId: 'synthetic-session', capability: 'synthetic-capability', requiredAge: 18, siteName: 'Fixture Merchant', methods, initialMethod });
@@ -88,11 +99,6 @@ async function fixture(t, { methods = ['document'], text = '3 DOB 08/24/1988\n4a
     __flowFixture: state,
     location: { origin: 'https://trustbunny.example', assign: value => state.navigations.push(value) },
     addEventListener: (name, callback) => windowEvents.set(name, callback),
-    Tesseract: { createWorker() { return {
-      async load() {}, async loadLanguage(language) { state.workerLanguages.push(language); }, async initialize() {}, async setParameters() {},
-      async recognize(image) { state.recognizedImages.push(image); return { data: { text: Array.isArray(text) ? text[Math.min(state.recognizedImages.length - 1, text.length - 1)] : text } }; },
-      terminate() { state.terminated++; },
-    }; } },
   };
   const context = vm.createContext({
     window, document, navigator: { mediaDevices: { enumerateDevices: async () => [] } },
@@ -140,7 +146,7 @@ test('document-only Florida journey reads a non-face fixture and completes witho
   assert.deepEqual(app.state.cameras, ['environment']);
   assert.equal(app.state.modelLoads, 0); assert.equal(app.state.faceInspections, 0); assert.equal(app.state.selfies, 0);
   assert.equal(app.state.captures, 1); assert.equal(app.state.terminated, 1);
-  assert.deepEqual(app.state.workerLanguages, ['eng']);
+  assert.equal(app.state.readerLoads, 1);
   assert.deepEqual(app.state.submissions, [{ path: '/result/success', body: { token: 'synthetic-capability', sessionId: 'synthetic-session', stepId: 5 } }]);
   assert.ok(app.state.images.every(image => image.width === 0 && image.height === 0));
   assert.ok(app.state.recognizedImages.every(image => image.width === 0 && image.height === 0));

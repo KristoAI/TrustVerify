@@ -40,7 +40,7 @@ The work is concentrated, but the document reader is substantial: `source/fronte
 | `script/build.mjs`, `script/gulpfile.js`, package scripts, Docker packaging | Remove dependence on legacy build; audit inherited build code | esbuild frontend and explicit core runtime packaging |
 | `wordpress/` | Leave implementation/license unchanged | Separate plugin artifact using the same service contract |
 
-Retain permissive third-party code by obtaining it from its own upstream release with exact versions, hashes, licenses and required notices. This includes face-api 1.7.12, the matched TensorFlow.js WASM, Tesseract.js 2.1.1/core 2.2.0, English/French OCR data, and WebRTC adapter if needed. Existing server/passkey libraries remain candidates to keep. jQuery, js-base64, Bootstrap and Font Awesome can be omitted where the new UI does not need them; their permissive licenses do not require a rewrite.
+Retain permissive third-party code by obtaining it from its own upstream release with exact versions, hashes, licenses and required notices. This includes face-api 1.7.12, the matched TensorFlow.js WASM, Tesseract.js 2.1.1/core 2.2.0, English/French OCR data, and WebRTC adapter if needed. (October 19, 2026: Tesseract was later replaced by Indra OCR on onnxruntime-web; see the licence audit.) Existing server/passkey libraries remain candidates to keep. jQuery, js-base64, Bootstrap and Font Awesome can be omitted where the new UI does not need them; their permissive licenses do not require a rewrite.
 
 ## Implementation sequence
 
