@@ -141,7 +141,9 @@ test('an unreadable DOB label falls back to the earliest printed date only when 
   assert.deepEqual(unlabelled('eroos 08/24/1988-+ssEx M.\n4εх» 08/24/2030\n4a ss 01/02/2020\n«EP_ACED 03/04/202t'), { year: 1988, month: 8, day: 24 }, 'phone OCR glues stray marks after the date');
   assert.deepEqual(unlabelled('X12-05-1950 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date after a letter is part of a code');
   assert.equal(unlabelled('3 DOB ?? \n' + card), null, 'a recognised DOB label leaves the decision to the labelled rules');
-  assert.equal(unlabelled('2.00s 08/24/1988 ssex M\n4b EXP 08/24/2030'), null, 'needs two past dates');
+  assert.deepEqual(unlabelled('2.00s 08/24/1988 ssex M\n4b EXP 08/24/2030\n4a ISS 01/02/20.'), { year: 1988, month: 8, day: 24 }, 'a future expiry counts as the second date');
+  assert.equal(unlabelled('2.00s 08/24/1988 ssex M\n4a ISS 01/02/20.'), null, 'needs two whole dates');
+  assert.equal(unlabelled('08/24/2030\n08/24/2034'), null, 'future dates are never the birth date');
   assert.equal(unlabelled('ISS 08/24/1988\n01/02/2020'), null, 'earliest date labelled as another field');
   assert.equal(unlabelled('REPLACED 08/24/1988\n01/02/2020'), null);
   assert.equal(unlabelled('08/24/2015\n01/02/2020'), null, 'dates closer than ten years');

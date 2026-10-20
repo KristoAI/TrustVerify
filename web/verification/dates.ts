@@ -116,8 +116,8 @@ const UNLABELLED_MAX_AGE = 120;
  * unambiguous. A birth date precedes every other date on an identity document, so if the
  * birth date itself was missed, the earliest remaining date (issue, replacement) gives a
  * younger age and the check fails rather than passing someone underage. Fails closed when
- * any DOB label is present (the labelled rules own that), fewer than two past dates are
- * whole printed fields, the earliest is labelled as another field, another date falls
+ * any DOB label is present (the labelled rules own that), fewer than two dates (past, or a
+ * future expiry) are whole printed fields, the earliest is in the future, the earliest is labelled as another field, another date falls
  * within ten years of it, or the resulting age is outside 10–120.
  */
 export function parseUnlabelledBirthDate(text: string, options: { dateOrder?: DateOrder; now?: Date } = {}): BirthDate | null {
@@ -130,7 +130,6 @@ export function parseUnlabelledBirthDate(text: string, options: { dateOrder?: Da
     for (const match of line.matchAll(standaloneDate)) {
       const [date] = dateCandidates(match[1], options.dateOrder);
       if (!date) return null; // An impossible date-shaped field fails closed.
-      if (!isValidBirthDate(date, now)) continue; // Future dates (expiry) are never the birth date.
       const before = line.slice(0, match.index).trim().split(/\s+/).slice(-2).join(' ');
       found.push({ date, labelled: otherLabel.test(before) || laterEventLabel.test(before) });
     }
@@ -138,6 +137,8 @@ export function parseUnlabelledBirthDate(text: string, options: { dateOrder?: Da
   const distinct = [...new Map(found.map(item => [dateTime(item.date), item])).values()].sort((a, b) => dateTime(a.date) - dateTime(b.date));
   if (distinct.length < UNLABELLED_MIN_DATES) return null;
   const [earliest, next] = distinct;
+  // A future date (expiry) still counts as the second field, but is never the birth date.
+  if (!isValidBirthDate(earliest.date, now)) return null;
   // A duplicate earliest date with any other label means its field is uncertain.
   if (found.some(item => dateTime(item.date) === dateTime(earliest.date) && item.labelled)) return null;
   const gap = new Date(dateTime(earliest.date));
