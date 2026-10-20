@@ -7,7 +7,9 @@
  * - deskew (`straighten`) is a separate step, so the caller can crop fields
  *   from the same straightened frame the word boxes describe;
  * - detection never upscales a small image, then rescales once toward a
- *   readable line height, so tight document crops read like full pages.
+ *   readable line height, so tight document crops read like full pages;
+ * - every input gets a replicated border before detection, so text touching
+ *   the edge of a tight selected box is not broken into fragments.
  * Images, text and tensors stay in this page's memory and are zeroed after use.
  */
 import type { OCRWord } from './document-locator';
@@ -42,6 +44,9 @@ const DETECT_MAX_H = 40, DETECT_TARGET_H = 24;
 const SPLIT_GAP = 3.0, MIN_CONF = 0.5, INPUT_MULTIPLE = 32, OUT_STRIDE = 2, CORE_X_SHRINK = 0.15;
 const PAD_Y = 0.2, PAD_X = 0.3, WIDTH_MULTIPLE = 8, MAX_LINE_WIDTH = 4096;
 const MAX_LINES = 400;
+// Local addition: text touching the image edge (a tight selected box) breaks into fragments;
+// a replicated border of half the shorter side, 8–64 px, gives the detector page-like margins.
+const BORDER_FRACTION = .5, BORDER_MIN = 8, BORDER_MAX = 64;
 const DESKEW_MAX = 45, DESKEW_MIN = .3, PREVIEW_SIDE = 1600, SKEW_SIDE = 800;
 
 // Python's round(): half to even, so sizes match the reference implementation.
@@ -223,6 +228,17 @@ export function straighten(canvas: HTMLCanvasElement): HTMLCanvasElement | null 
     if (preview && preview !== gray) preview.data.fill(0);
     gray.data.fill(0);
   }
+}
+
+/** The page with `margin` pixels of replicated edge on every side. */
+function withBorder(gray: Gray, margin: number): Gray {
+  const width = gray.width + 2 * margin, height = gray.height + 2 * margin;
+  const data = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const row = Math.min(gray.height - 1, Math.max(0, y - margin)) * gray.width;
+    for (let x = 0; x < width; x++) data[y * width + x] = gray.data[row + Math.min(gray.width - 1, Math.max(0, x - margin))];
+  }
+  return { data, width, height };
 }
 
 /** Light text on a dark ground is read inverted (rec_preproc.is_dark_line). */
@@ -501,10 +517,21 @@ class IndraReader implements OCRReader {
 
   async recognize(image: HTMLCanvasElement, onProgress?: (progress: number) => void): Promise<OCRResult> {
     if (!this.det || !this.rec || this.closed) throw new Error('OCR not loaded');
-    const gray = toGray(image);
+    const source = toGray(image);
+    const margin = Math.round(Math.min(BORDER_MAX, Math.max(BORDER_MIN, BORDER_FRACTION * Math.min(source.width, source.height))));
+    const gray = withBorder(source, margin);
+    source.data.fill(0);
     try {
       const boxes = (await this.detect(gray)).slice(0, MAX_LINES);
-      const lines = (await this.recognizeLines(gray, boxes, onProgress)).flatMap(line => line.text ? this.splitLine(line) : []);
+      // Back to input pixels; lines found only in the replicated border are dropped.
+      const inside = (box: Box): Box => [
+        Math.max(0, box[0] - margin), Math.max(0, box[1] - margin),
+        Math.min(image.width, box[2] - margin), Math.min(image.height, box[3] - margin),
+      ];
+      const lines = (await this.recognizeLines(gray, boxes, onProgress))
+        .map(line => ({ ...line, box: inside(line.box), tokens: line.tokens.map(token => ({ id: token.id, x: token.x - margin })) }))
+        .filter(line => line.text && line.box[2] > line.box[0] && line.box[3] > line.box[1])
+        .flatMap(line => this.splitLine(line));
       // Physical rows, top to bottom, then left to right inside a row.
       const rows: Line[][] = [];
       for (const line of [...lines].sort((a, b) => a.box[1] - b.box[1] || a.box[0] - b.box[0])) {
