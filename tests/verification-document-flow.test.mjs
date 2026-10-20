@@ -279,32 +279,64 @@ test('leaving quality advice clears the captured image without starting OCR', as
   assert.ok(app.state.images.every(image => image.width === 0 && image.height === 0));
 });
 
-test('unreadable document opens manual box selection after exactly two automatic OCR attempts', async t => {
+async function retakeTwice(app) {
+  for (const retake of [1, 2]) {
+    await app.until(() => Boolean(app.find('button', 'Retake photo')), `Retake ${retake} was not offered`);
+    assert.equal(app.find('button', 'Read selected area'), undefined, 'No date box before both retakes');
+    assert.match(app.root.textContent, new RegExp(`Retake ${retake} of 2`));
+    assert.ok(app.state.images.every(image => image.width === 0 && image.height === 0), 'The unreadable photo is discarded');
+    await app.click('Retake photo'); await app.click('Capture document');
+  }
+}
+
+test('an unreadable document asks for two retakes before offering the date box', async t => {
   const app = await fixture(t, { text: 'unreadable document', initialMethod: 'document' });
   await app.florida(); await app.click('Capture document');
+  await retakeTwice(app);
   await app.until(() => Boolean(app.find('button', 'Read selected area')), 'Manual box selection did not open');
-  assert.equal(app.state.recognizedImages.length, 2);
+  assert.equal(app.state.captures, 3);
+  assert.equal(app.state.recognizedImages.length, 6, 'Two automatic OCR attempts per photo');
   assert.equal(app.state.submissions.length, 0);
   assert.equal(app.state.navigations.length, 0);
   assert.ok(app.find('label', 'Left edge'));
   assert.ok(app.find('label', 'Selection width'));
   await app.settled();
-  assert.equal(app.state.recognizedImages.length, 2, 'No hidden third OCR attempt while awaiting the visitor');
+  assert.equal(app.state.recognizedImages.length, 6, 'No hidden extra OCR attempt while awaiting the visitor');
+});
+
+test('a retaken photo that reads completes without the date box', async t => {
+  const app = await fixture(t, { text: ['unreadable', 'unreadable', '3 DOB 08/24/1988\n4a ISS 01/02/2020'], initialMethod: 'document' });
+  await app.florida(); await app.click('Capture document');
+  await app.until(() => Boolean(app.find('button', 'Retake photo')), 'Retake was not offered');
+  await app.click('Retake photo'); await app.click('Capture document');
+  await app.until(() => app.state.navigations.length === 1, 'Retaken photo did not complete');
+  assert.equal(app.state.captures, 2);
+  assert.equal(app.state.submissions[0].path, '/result/success');
+});
+
+test('starting a new document check resets the retake count', async t => {
+  const app = await fixture(t, { text: 'unreadable document', initialMethod: 'document' });
+  await app.florida(); await app.click('Capture document');
+  await app.until(() => Boolean(app.find('button', 'Retake photo')), 'Retake was not offered');
+  await app.click('Back to verification options'); await app.click('Document ID'); await app.florida(); await app.click('Capture document');
+  await app.until(() => Boolean(app.find('button', 'Retake photo')), 'A new check must start with retakes again');
+  assert.match(app.root.textContent, /Retake 1 of 2/);
 });
 
 
 test('manual recovery needs explicit box selection and can read a date without its label', async t => {
-  const app = await fixture(t, { text: ['unreadable', 'unreadable', '08/24/1988'], initialMethod: 'document' });
+  const app = await fixture(t, { text: ['unreadable', 'unreadable', 'unreadable', 'unreadable', 'unreadable', 'unreadable', '08/24/1988'], initialMethod: 'document' });
   await app.florida(); await app.click('Capture document');
+  await retakeTwice(app);
   await app.until(() => Boolean(app.find('button', 'Read selected area')), 'Manual selection did not open');
   assert.equal(app.find('button', 'Read selected area').disabled, true);
-  assert.equal(app.state.recognizedImages.length, 2);
+  assert.equal(app.state.recognizedImages.length, 6);
   const left = app.find('label', 'Left edge').querySelector('input');
   left.value = '40'; left.dispatch('input'); await app.settled();
   assert.equal(app.find('button', 'Read selected area').disabled, false);
   await app.click('Read selected area');
   await app.until(() => app.state.navigations.length === 1, 'Date-only manual recovery did not complete');
-  assert.equal(app.state.recognizedImages.length, 3, 'Two automatic calls plus one explicit human-selected read');
+  assert.equal(app.state.recognizedImages.length, 7, 'Two automatic calls for each of three photos plus one explicit human-selected read');
   assert.equal(app.state.submissions[0].path, '/result/success');
   assert.equal(app.state.submissions[0].body.stepId, 5);
 });

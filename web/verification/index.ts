@@ -22,6 +22,10 @@ let language: 'eng' | 'fra' = 'eng';
 // A known printed order for the selected document; dates are otherwise read in any common format.
 let dateOrder: DateOrder | undefined;
 let selectedDocumentProfile: ReturnType<typeof documentProfile> = null;
+// The reader handles most clear photos, so an unreadable scan first asks for a better photo;
+// the manual date box is offered only after this many retakes also fail.
+const DOCUMENT_RETAKES = 2;
+let unreadableScans = 0;
 
 function clearSensitive() {
   controller.abort();
@@ -72,6 +76,7 @@ function showMethods() {
 
 function documentSetup(reason?: string) {
   if (!config.methods.includes('document')) return;
+  unreadableScans = 0;
   clearSensitive();
   const view = render('Prepare your document', `${reason ? `${reason} ` : ''}We will read the printed date of birth on your identity document. No selfie or portrait comparison is needed for this document check.`);
   const choose = (caption: string, placeholder: string, choices: readonly {value:string;label:string}[]) => {
@@ -291,9 +296,24 @@ async function extractDate(signal: AbortSignal, crop?: Selection) {
     showProblem('We could not confirm that this document meets the age requirement.', 'document');
   } catch (error) {
     if (signal.aborted) return;
-    if (error instanceof DocumentReadError && error.code === 'DATE_UNREADABLE') return selectDateRegion(signal);
+    if (error instanceof DocumentReadError && error.code === 'DATE_UNREADABLE') {
+      if (!crop && unreadableScans < DOCUMENT_RETAKES) return retakeDocument(++unreadableScans);
+      return selectDateRegion(signal);
+    }
     showProblem('The document reader could not finish. Please try again with a clear image and a stable connection.', 'document');
   }
+}
+
+function retakeDocument(retake: number) {
+  clearSensitive();
+  const view = render('Let’s retake the photo', `We could not read the date of birth from that photo. Retake ${retake} of ${DOCUMENT_RETAKES}: most unreadable photos come from glare, blur or part of the card being out of view.`);
+  for (const tip of [
+    'Use bright, even light. Tilt the card slightly if light reflects off it.',
+    'Hold your phone steady, or rest your elbows on a table, and let the camera focus before capturing.',
+    'Keep the whole card in view, flat and square to the camera, filling most of the frame.',
+  ]) view.content.append(element('p', tip));
+  view.actions.append(button('Retake photo', () => documentCapture(newAttempt())));
+  addExit(view.actions);
 }
 
 function selectDateRegion(signal: AbortSignal) {
