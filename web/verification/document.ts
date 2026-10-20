@@ -1,6 +1,6 @@
 import { cropToPixels, type NormalizedCrop } from './crop';
 import { recordDiagnostic } from './diagnostics';
-import { hasConflictingBirthDates, parseBirthDate, type BirthDate, type DateOrder } from './dates';
+import { hasConflictingBirthDates, parseBirthDate, parseUnlabelledBirthDate, type BirthDate, type DateOrder } from './dates';
 import { inspectMRZ } from './mrz';
 import { locateBirthDateRegion, type OCRWord } from './document-locator';
 import { createOCRReader, straighten, type OCRReader, type OCRResult } from './ocr';
@@ -95,7 +95,7 @@ function readLocatedDate(words: OCRWord[], crop: NormalizedCrop, width: number, 
 }
 
 /** All image/text processing stays in browser memory. Only fixed progress labels leave this module. */
-export async function readDocument(options: ReadOptions): Promise<{ birthDate: BirthDate; source: 'label' | 'selected-region' | 'mrz' }> {
+export async function readDocument(options: ReadOptions): Promise<{ birthDate: BirthDate; source: 'label' | 'earliest-date' | 'selected-region' | 'mrz' }> {
   const { image, signal, onProgress, dateOrder } = options;
   if (signal?.aborted) throw new DOMException('Verification cancelled.', 'AbortError');
   if (!image || !Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) || image.width <= 0 || image.height <= 0) throw new DocumentReadError('INVALID_IMAGE');
@@ -187,6 +187,18 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
           if (previousBirthDate && !sameDate(previousBirthDate, birthDate)) throw new DocumentReadError('DATE_UNREADABLE');
           recordDiagnostic('document-result', 'success');
           return { birthDate, source: options.crop ? 'selected-region' : 'label' };
+        }
+        // No DOB label could be read anywhere: fall back to the earliest printed date,
+        // accepted only when both full-image passes independently agree on it.
+        const unlabelled = !options.crop && !focusedCrop && !located && !birthDate ? parseUnlabelledBirthDate(text, { dateOrder }) : null;
+        if (unlabelled && index === 0) {
+          previousBirthDate = unlabelled;
+          recordDiagnostic('date-check', 'retry', { attempt: index + 1 });
+          continue;
+        }
+        if (unlabelled && previousBirthDate && sameDate(previousBirthDate, unlabelled)) {
+          recordDiagnostic('document-result', 'success');
+          return { birthDate: unlabelled, source: 'earliest-date' };
         }
         recordDiagnostic('date-check', 'retry', { attempt: index + 1 });
       } finally {

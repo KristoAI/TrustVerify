@@ -125,10 +125,10 @@ export function documentProfile(selection: DocumentSelection): DocumentProfile |
   };
   return {
     language,
-    // A visible, editable starting choice, not automatic layout detection.
+    // Settles day/month order only when both readings are real dates; any common format is read.
     dateOrder: selection.country === 'US' ? 'MDY' : undefined,
     captureTitle: selection.kind === 'driver-license' ? 'Scan your driver’s license' : 'Scan your government ID card',
     captureInstruction: `Show the side of your ${issuer} ${selection.kind === 'driver-license' ? 'driver’s license' : 'ID card'} that contains the printed date of birth. Keep the date and its label sharp, with the whole card in view.`,
-    readerHint: 'Check that the selected date order matches your card. No live selfie is needed for this document check.',
+    readerHint: 'Keep the printed date of birth sharp and free of glare. No live selfie is needed for this document check.',
   };
 }

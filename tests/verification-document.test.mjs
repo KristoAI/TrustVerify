@@ -11,7 +11,7 @@ async function loadModule(path) {
   const result = await build({ entryPoints: [path], bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', plugins: [syntheticReader] });
   return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
 }
-const { parseBirthDate, ageOnDate, meetsRequiredAge, isValidBirthDate } = await loadModule('web/verification/dates.ts');
+const { parseBirthDate, parseUnlabelledBirthDate, ageOnDate, meetsRequiredAge, isValidBirthDate } = await loadModule('web/verification/dates.ts');
 const { normalizeCrop, cropToPixels } = await loadModule('web/verification/crop.ts');
 const { readDocument, OCR_TIMEOUT_MS } = await loadModule('web/verification/document.ts');
 const { inspectMRZ, parseMRZBirthDate, mrzCheckDigit, resolveMRZBirthDate } = await loadModule('web/verification/mrz.ts');
@@ -105,14 +105,63 @@ test('region selection accepts exactly one date and never chooses among conflict
   assert.equal(parse('2000-09-19 2025-02-31', { selectedRegion: true }), null);
 });
 
-test('date orders are explicit; ambiguous dates and two-digit years are not guessed', () => {
-  assert.equal(parse('DOB 01/02/2000'), null);
+test('every common printed date format is read without the visitor choosing an order', () => {
+  const august24 = { year: 1988, month: 8, day: 24 };
+  for (const text of ['DOB 1988-08-24', 'DOB 1988/08/24', 'DOB 08/24/1988', 'DOB 24.08.1988', 'DOB 24-08-1988', 'DOB 19880824',
+    'DOB 24 AUG 1988', 'DOB 24AUG1988', 'DOB 24-Aug-1988', 'DOB AUG 24, 1988', 'DOB August 24th 1988', 'DOB 1988 AUG 24', 'DOB 1988-AUG-24', 'Né le 24 août 1988']) {
+    assert.deepEqual(parse(text), august24, text);
+    assert.deepEqual(parse(text.replace(/^(?:DOB|Né le) /, ''), { selectedRegion: true }), august24, `selected ${text}`);
+  }
+  // A known order only settles dates that are real either way; it never forces an impossible one.
+  assert.deepEqual(parse('DOB 24/08/1988', { dateOrder: 'MDY' }), august24);
+  assert.deepEqual(parse('DOB 08/24/1988', { dateOrder: 'DMY' }), august24);
+});
+
+test('ambiguous day/month dates use the known order, else the later date, so age is never overstated', () => {
   assert.deepEqual(parse('DOB 01/02/2000', { dateOrder: 'MDY' }), { year: 2000, month: 1, day: 2 });
   assert.deepEqual(parse('DOB 01/02/2000', { dateOrder: 'DMY' }), { year: 2000, month: 2, day: 1 });
-  assert.equal(parse('DOB 01/02/2000', { dateOrder: 'YMD' }), null);
+  assert.deepEqual(parse('DOB 01/02/2000'), { year: 2000, month: 2, day: 1 });
+  assert.deepEqual(parse('DOB 01/02/2000', { dateOrder: 'YMD' }), { year: 2000, month: 2, day: 1 });
   assert.deepEqual(parse('DOB 2000/02/01', { dateOrder: 'YMD' }), { year: 2000, month: 2, day: 1 });
-  assert.equal(parse('DOB 01/02/00', { dateOrder: 'MDY' }), null);
-  assert.equal(parse('DOB 010200'), null);
+  // 10 Sep 2008 would be 18 on the test date, 9 Oct 2008 would not: an unknown order must not pass.
+  assert.equal(meetsRequiredAge(parse('DOB 10/09/2008'), 18, now), false);
+});
+
+test('two-digit years and short compact numbers are never expanded into a century', () => {
+  for (const text of ['DOB 01/02/00', 'DOB 010200', 'DOB 24AUG88', 'DOB 24 AUG 88', 'DOB 01022000']) assert.equal(parse(text, { dateOrder: 'MDY' }), null, text);
+});
+
+test('an unreadable DOB label falls back to the earliest printed date only when unambiguous', () => {
+  const card = 'FLORIDA DRIVER LICENSE\nD123-456-78-901-0\n2.00s 08/24/1988 ssex M\n46xp 08/24/2030\nan iss 01/02/2020\nREPLACED. 03/04/2021';
+  const unlabelled = (text, options = {}) => parseUnlabelledBirthDate(text, { now, dateOrder: 'MDY', ...options });
+  assert.deepEqual(unlabelled(card), { year: 1988, month: 8, day: 24 });
+  assert.deepEqual(unlabelled('D12-05-1950 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date-shaped run inside a number is ignored');
+  assert.deepEqual(unlabelled('2.0on 08/24/1988-issEx M\n4aiss 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'OCR may glue the next word onto the date');
+  assert.deepEqual(unlabelled('12-05-1950-7 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date followed by more digits is a number');
+  assert.equal(unlabelled('3 DOB ?? \n' + card), null, 'a recognised DOB label leaves the decision to the labelled rules');
+  assert.equal(unlabelled('2.00s 08/24/1988 ssex M\n4b EXP 08/24/2030'), null, 'needs two past dates');
+  assert.equal(unlabelled('ISS 08/24/1988\n01/02/2020'), null, 'earliest date labelled as another field');
+  assert.equal(unlabelled('REPLACED 08/24/1988\n01/02/2020'), null);
+  assert.equal(unlabelled('08/24/2015\n01/02/2020'), null, 'dates closer than ten years');
+  assert.equal(unlabelled('01/01/1900\n01/02/2020'), null, 'implausible age');
+  assert.equal(unlabelled('08/24/1988\n13/45/2020'), null, 'an impossible date-shaped field fails closed');
+  assert.deepEqual(unlabelled('04/05/1991\n01/02/2020', { dateOrder: undefined }), { year: 1991, month: 5, day: 4 }, 'unknown order uses the later reading');
+});
+
+test('earliest-date fallback needs two full-image passes to agree', async t => {
+  const card = (dob) => ({ data: { text: `2.00s ${dob} ssex M\nan iss 01/02/2020\nREPLACED. 03/04/2021`, words: [] } });
+  let attempts = 0;
+  let fixture = browserFixture(t, { async recognize() { attempts++; return card('08/24/1988'); } });
+  assert.deepEqual(await readDocument({ image: fixture.image, dateOrder: 'MDY' }), { birthDate: { year: 1988, month: 8, day: 24 }, source: 'earliest-date' });
+  assert.equal(attempts, 2);
+  attempts = 0;
+  fixture = browserFixture(t, { async recognize() { return card(++attempts === 1 ? '08/24/1988' : '08/24/1986'); } });
+  await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY' }), { code: 'DATE_UNREADABLE' });
+  attempts = 0;
+  fixture = browserFixture(t, { async recognize() { return ++attempts === 1 ? { data: { text: 'unreadable', words: [] } } : card('08/24/1988'); } });
+  await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY' }), { code: 'DATE_UNREADABLE' });
+  fixture = browserFixture(t, { async recognize() { return card('08/24/1988'); } });
+  await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY', crop: { x: 0, y: 0, width: 1, height: 1 } }), { code: 'DATE_UNREADABLE' }, 'never for a selected region');
 });
 
 test('calendar validation rejects rollover, future dates and invalid required ages', () => {
@@ -371,5 +420,5 @@ test('manual field selection does not depend on English/French DOB label spellin
     // Synthetic ISO-order date, not a real document or a claim of OCR language coverage.
     assert.deepEqual(parse(`${label} 1988-08-24`,{dateOrder:'YMD',selectedRegion:true}),{year:1988,month:8,day:24});
   }
-  assert.equal(parse('01/02/1988',{selectedRegion:true}),null);
+  assert.deepEqual(parse('01/02/1988',{selectedRegion:true}),{year:1988,month:2,day:1},'unknown order takes the later reading');
 });

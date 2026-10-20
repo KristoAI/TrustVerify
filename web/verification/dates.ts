@@ -37,22 +37,53 @@ export function meetsRequiredAge(birthDate: BirthDate, requiredAge: number, now 
   return ageOnDate(birthDate, now) >= requiredAge;
 }
 
+const isCalendarDate = (date: BirthDate) => {
+  const value = new Date(Date.UTC(date.year, date.month - 1, date.day));
+  return date.year >= 1000 && value.getUTCFullYear() === date.year && value.getUTCMonth() + 1 === date.month && value.getUTCDate() === date.day;
+};
+const dateTime = (date: BirthDate) => Date.UTC(date.year, date.month - 1, date.day);
+
+/** Day/month order is read from the digits when only one order is a real date. When both are,
+ * the document's known order wins; with none known, the later date is used so an unknown
+ * format can only understate an age, never overstate it.
+ */
+function numericDate(first: string, second: string, year: string, order?: DateOrder): BirthDate | null {
+  const monthFirst = { year: +year, month: +first, day: +second };
+  const dayFirst = { year: +year, month: +second, day: +first };
+  const valid = [monthFirst, dayFirst].filter(isCalendarDate);
+  if (valid.length < 2) return valid[0] ?? null;
+  if (order === 'MDY') return monthFirst;
+  if (order === 'DMY') return dayFirst;
+  return dateTime(monthFirst) >= dateTime(dayFirst) ? monthFirst : dayFirst;
+}
+
+/** Every common printed form: 1988-08-24, 08/24/1988, 24.08.1988, 19880824, 24 AUG 1988,
+ * 24AUG1988, AUG 24, 1988 and 1988 AUG 24 (English or French month names). Two-digit years
+ * are never expanded, because a wrong century can turn a child into an adult.
+ */
 function dateCandidates(text: string, order?: DateOrder): Array<BirthDate | null> {
-  const candidates: Array<BirthDate | null> = [];
+  const found: Array<{ start: number; end: number; date: BirthDate | null }> = [];
+  const add = (match: RegExpMatchArray, date: BirthDate | null) => {
+    const start = match.index!, end = start + match[0].length;
+    // One printed date can fit several patterns; count it once.
+    if (!found.some(item => start < item.end && item.start < end)) found.push({ start, end, date });
+  };
   const numeric = /\b(\d{4}|\d{1,2})[/.\-\s](\d{1,2})[/.\-\s](\d{4}|\d{1,2})\b/g;
   for (const match of text.matchAll(numeric)) {
     const [, a, b, c] = match;
-    if (a.length === 4 && c.length <= 2) candidates.push({ year: +a, month: +b, day: +c });
-    else if (c.length === 4 && a.length <= 2 && order !== 'YMD') {
-      const resolvedOrder = order ?? (+a > 12 ? 'DMY' : +b > 12 ? 'MDY' : +a === +b ? 'MDY' : undefined);
-      candidates.push(resolvedOrder ? { year: +c, month: +(resolvedOrder === 'MDY' ? a : b), day: +(resolvedOrder === 'MDY' ? b : a) } : null);
-    } else candidates.push(null); // Never infer a century from a two-digit year.
+    if (a.length === 4 && c.length <= 2) add(match, { year: +a, month: +b, day: +c });
+    else if (c.length === 4 && a.length <= 2) add(match, numericDate(a, b, c, order));
+    else add(match, null); // Never infer a century from a two-digit year.
   }
-  const dayFirst = new RegExp(`\\b(\\d{1,2})[\\s./-]+(${monthPattern})\\.?[\\s,/-]+(\\d{4})\\b`, 'g');
-  const monthFirst = new RegExp(`\\b(${monthPattern})\\.?[\\s./-]+(\\d{1,2})(?:st|nd|rd|th)?[\\s,/-]+(\\d{4})\\b`, 'g');
-  for (const [, day, month, year] of text.matchAll(dayFirst)) candidates.push({ year: +year, month: months.get(month)!, day: +day });
-  for (const [, month, day, year] of text.matchAll(monthFirst)) candidates.push({ year: +year, month: months.get(month)!, day: +day });
-  return candidates;
+  const dayFirst = new RegExp(`\\b(\\d{1,2})[\\s./-]*(${monthPattern})\\.?[\\s,/-]*(\\d{4})\\b`, 'g');
+  const monthFirst = new RegExp(`\\b(${monthPattern})\\.?[\\s./-]*(\\d{1,2})(?:st|nd|rd|th)?[\\s,/-]+(\\d{4})\\b`, 'g');
+  const yearFirst = new RegExp(`\\b(\\d{4})[\\s./-]*(${monthPattern})\\.?[\\s./-]*(\\d{1,2})\\b`, 'g');
+  for (const match of text.matchAll(dayFirst)) add(match, { year: +match[3], month: months.get(match[2])!, day: +match[1] });
+  for (const match of text.matchAll(monthFirst)) add(match, { year: +match[3], month: months.get(match[1])!, day: +match[2] });
+  for (const match of text.matchAll(yearFirst)) add(match, { year: +match[1], month: months.get(match[2])!, day: +match[3] });
+  // Compact year-month-day only; compact day/month orders are too easily a document number.
+  for (const match of text.matchAll(/\b((?:19|20)\d{2})(\d{2})(\d{2})\b/g)) add(match, { year: +match[1], month: +match[2], day: +match[3] });
+  return found.sort((a, b) => a.start - b.start).map(item => item.date);
 }
 
 function labelledRegions(normalized: string): string[] {
@@ -69,6 +100,50 @@ export function hasConflictingBirthDates(text: string, options: { dateOrder?: Da
   if (typeof text !== 'string' || text.length > 100_000) return true;
   const dates = labelledRegions(normalizeText(text)).flatMap(region => dateCandidates(region, options.dateOrder));
   return new Set(dates.filter(date => date && isValidBirthDate(date, options.now ?? new Date())).map(date => `${date!.year}-${date!.month}-${date!.day}`)).size > 1;
+}
+
+// Labels that mark a printed date as a later licence event rather than the birth date.
+const laterEventLabel = /\b(?:replaced|reissued?|renewed?|rev(?:ised)?)\b/i;
+// A whole printed field: not part of a longer number or code, though OCR may glue the next word on.
+const standaloneDate = /(?<=^|[\s(\[:"'])(\d{1,2}([/.-])\d{1,2}\2\d{4}|\d{4}([/.-])\d{1,2}\3\d{1,2})(?=$|[\s)\],;:."']|-[a-z])/g;
+const UNLABELLED_MIN_DATES = 2;
+const UNLABELLED_MIN_GAP_YEARS = 10;
+const UNLABELLED_MIN_AGE = 10;
+const UNLABELLED_MAX_AGE = 120;
+
+/** For full-page OCR whose DOB label is unreadable: the earliest printed date, only when it is
+ * unambiguous. A birth date precedes every other date on an identity document, so if the
+ * birth date itself was missed, the earliest remaining date (issue, replacement) gives a
+ * younger age and the check fails rather than passing someone underage. Fails closed when
+ * any DOB label is present (the labelled rules own that), fewer than two past dates are
+ * whole printed fields, the earliest is labelled as another field, another date falls
+ * within ten years of it, or the resulting age is outside 10–120.
+ */
+export function parseUnlabelledBirthDate(text: string, options: { dateOrder?: DateOrder; now?: Date } = {}): BirthDate | null {
+  if (typeof text !== 'string' || text.length > 100_000 || (options.dateOrder && !['MDY', 'DMY', 'YMD'].includes(options.dateOrder))) return null;
+  const normalized = normalizeText(text);
+  if (labelledRegions(normalized).length > 0) return null;
+  const now = options.now ?? new Date();
+  const found: Array<{ date: BirthDate; labelled: boolean }> = [];
+  for (const line of normalized.split('\n')) {
+    for (const match of line.matchAll(standaloneDate)) {
+      const [date] = dateCandidates(match[1], options.dateOrder);
+      if (!date) return null; // An impossible date-shaped field fails closed.
+      if (!isValidBirthDate(date, now)) continue; // Future dates (expiry) are never the birth date.
+      const before = line.slice(0, match.index).trim().split(/\s+/).slice(-2).join(' ');
+      found.push({ date, labelled: otherLabel.test(before) || laterEventLabel.test(before) });
+    }
+  }
+  const distinct = [...new Map(found.map(item => [dateTime(item.date), item])).values()].sort((a, b) => dateTime(a.date) - dateTime(b.date));
+  if (distinct.length < UNLABELLED_MIN_DATES) return null;
+  const [earliest, next] = distinct;
+  // A duplicate earliest date with any other label means its field is uncertain.
+  if (found.some(item => dateTime(item.date) === dateTime(earliest.date) && item.labelled)) return null;
+  const gap = new Date(dateTime(earliest.date));
+  gap.setUTCFullYear(gap.getUTCFullYear() + UNLABELLED_MIN_GAP_YEARS);
+  if (dateTime(next.date) < gap.getTime()) return null;
+  const age = ageOnDate(earliest.date, now);
+  return age >= UNLABELLED_MIN_AGE && age <= UNLABELLED_MAX_AGE ? earliest.date : null;
 }
 
 /** Full-page OCR must identify a DOB label. A selected region may hold one unlabelled date. */

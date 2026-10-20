@@ -5,7 +5,7 @@ import { selfieOutcome, selfieThreshold, verificationMethods } from './flow';
 import { documentCountries, documentKinds, documentRegions, requiresDocumentRegion, documentProfile, type DocumentKind, type DocumentSelection } from './document-options';
 import { readDocument, DocumentReadError } from './document';
 import { inspectDocumentQuality, documentQualityAdvice } from './document-quality';
-import { meetsRequiredAge } from './dates';
+import { meetsRequiredAge, type DateOrder } from './dates';
 import { cropReview, type Selection } from './crop-review';
 import { Continuation, type VerificationConfig } from './continuation';
 import { button, element, render, request, safeCompletionUrl } from './ui';
@@ -19,7 +19,8 @@ let submitting = false;
 let config: VerificationConfig;
 let continuation: Continuation;
 let language: 'eng' | 'fra' = 'eng';
-let dateOrder: 'MDY' | 'DMY' | 'YMD' = 'MDY';
+// A known printed order for the selected document; dates are otherwise read in any common format.
+let dateOrder: DateOrder | undefined;
 let selectedDocumentProfile: ReturnType<typeof documentProfile> = null;
 
 function clearSensitive() {
@@ -89,23 +90,21 @@ function documentSetup(reason?: string) {
   const hint = element('p', '', 'subtle');
   view.content.append(hint);
   const lang = choose('Document language', 'Choose the document language', [{ value: 'eng', label: 'English' }, { value: 'fra', label: 'French' }]);
-  const order = choose('Printed date order', 'Choose the order shown on your document', [{ value: 'MDY', label: 'Month / day / year' }, { value: 'DMY', label: 'Day / month / year' }, { value: 'YMD', label: 'Year / month / day' }]);
-  view.content.append(element('p', 'Check the suggested language and date order against your document. Change either if needed before continuing.', 'subtle'));
+  view.content.append(element('p', 'Check the suggested language against your document. Change it if needed before continuing.', 'subtle'));
   const selection = (): DocumentSelection => ({ country: country.select.value, kind: kind.select.value as DocumentKind, ...(region.select.value ? { region: region.select.value } : {}) });
   const next = button('Continue to document scan', () => {
     const profile = documentProfile(selection());
-    if (!profile || !lang.select.value || !order.select.value) return;
+    if (!profile || !lang.select.value) return;
     selectedDocumentProfile = profile;
     language = lang.select.value as typeof language;
-    dateOrder = order.select.value as typeof dateOrder;
+    dateOrder = profile.dateOrder;
     return documentCapture(newAttempt());
   });
   next.disabled = true;
-  const validate = () => { next.disabled = !documentProfile(selection()) || !lang.select.value || !order.select.value; };
+  const validate = () => { next.disabled = !documentProfile(selection()) || !lang.select.value; };
   const updateProfile = () => {
     const profile = documentProfile(selection());
     lang.select.value = profile?.language || '';
-    order.select.value = profile?.dateOrder || '';
     hint.textContent = profile?.readerHint || 'Select the issuing country and document type to prepare the reader.';
     validate();
   };
@@ -121,7 +120,6 @@ function documentSetup(reason?: string) {
   kind.select.addEventListener('change', updateRegion);
   region.select.addEventListener('change', updateProfile);
   lang.select.addEventListener('change', validate);
-  order.select.addEventListener('change', validate);
   view.actions.append(next);
   addExit(view.actions);
 }

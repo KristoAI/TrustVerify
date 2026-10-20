@@ -132,7 +132,7 @@ async function fixture(t, { methods = ['document'], text = '3 DOB 08/24/1988\n4a
     assert.equal(find('button', 'Continue to document scan').disabled, true, 'Issuing region is required');
     await select('Issuing state, province or territory', 'FL');
     assert.equal(find('label', 'Document language').querySelector('select').value, 'eng');
-    assert.equal(find('label', 'Printed date order').querySelector('select').value, 'MDY');
+    assert.equal(find('label', 'Printed date order'), undefined, 'Visitors are never asked to choose a date format');
     await click('Continue to document scan');
   }
   await settled();
