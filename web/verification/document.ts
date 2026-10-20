@@ -1,6 +1,6 @@
 import { cropToPixels, type NormalizedCrop } from './crop';
 import { recordDiagnostic } from './diagnostics';
-import { hasConflictingBirthDates, parseBirthDate, parseUnlabelledBirthDate, type BirthDate, type DateOrder } from './dates';
+import { hasConflictingBirthDates, parseBirthDate, parseUnlabelledBirthDate, printedDates, type BirthDate, type DateOrder } from './dates';
 import { inspectMRZ } from './mrz';
 import { locateBirthDateRegion, type OCRWord } from './document-locator';
 import { createOCRReader, straighten, type OCRReader, type OCRResult } from './ocr';
@@ -132,6 +132,8 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
     let focusedCrop: NormalizedCrop | undefined;
     let previousBirthDate: BirthDate | null = null;
     let sawInvalidMRZ = false;
+    let firstUnlabelled: BirthDate | null = null;
+    let firstPassDates: BirthDate[] = [];
     for (let index = 0; index < OCR_MAX_ATTEMPTS; index++) {
       recordDiagnostic('preparing-image', 'start', { attempt: index + 1 });
       if (signal?.aborted) throw new DOMException('Verification cancelled.', 'AbortError');
@@ -188,17 +190,22 @@ export async function readDocument(options: ReadOptions): Promise<{ birthDate: B
           recordDiagnostic('document-result', 'success');
           return { birthDate, source: options.crop ? 'selected-region' : 'label' };
         }
-        // No DOB label could be read anywhere: fall back to the earliest printed date,
-        // accepted only when both full-image passes independently agree on it.
-        const unlabelled = !options.crop && !focusedCrop && !located && !birthDate ? parseUnlabelledBirthDate(text, { dateOrder }) : null;
-        if (unlabelled && index === 0) {
-          previousBirthDate = unlabelled;
-          recordDiagnostic('date-check', 'retry', { attempt: index + 1 });
-          continue;
-        }
-        if (unlabelled && previousBirthDate && sameDate(previousBirthDate, unlabelled)) {
-          recordDiagnostic('document-result', 'success');
-          return { birthDate: unlabelled, source: 'earliest-date' };
+        // No DOB label could be read anywhere: fall back to the earliest printed date. One
+        // pass may choose it, but the other pass must have read that same date too, and two
+        // different choices fail closed.
+        if (!options.crop && !focusedCrop && !located && !birthDate) {
+          const unlabelled = parseUnlabelledBirthDate(text, { dateOrder });
+          if (index === 0) {
+            firstUnlabelled = previousBirthDate = unlabelled;
+            firstPassDates = printedDates(text, { dateOrder });
+          } else {
+            const chosen = firstUnlabelled && unlabelled && !sameDate(firstUnlabelled, unlabelled) ? null : firstUnlabelled ?? unlabelled;
+            const confirmedBy = firstUnlabelled ? printedDates(text, { dateOrder }) : firstPassDates;
+            if (chosen && confirmedBy.some(date => sameDate(date, chosen))) {
+              recordDiagnostic('document-result', 'success');
+              return { birthDate: chosen, source: 'earliest-date' };
+            }
+          }
         }
         recordDiagnostic('date-check', 'retry', { attempt: index + 1 });
       } finally {

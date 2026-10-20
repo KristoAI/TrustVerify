@@ -104,8 +104,9 @@ export function hasConflictingBirthDates(text: string, options: { dateOrder?: Da
 
 // Labels that mark a printed date as a later licence event rather than the birth date.
 const laterEventLabel = /\b(?:replaced|reissued?|renewed?|rev(?:ised)?)\b/i;
-// A whole printed field: not part of a longer number or code, though OCR may glue the next word on.
-const standaloneDate = /(?<=^|[\s(\[:"'])(\d{1,2}([/.-])\d{1,2}\2\d{4}|\d{4}([/.-])\d{1,2}\3\d{1,2})(?=$|[\s)\],;:."']|-[a-z])/g;
+// A whole printed field: never preceded by a letter, digit or separator (a licence or document
+// number), never followed by more digits. OCR may glue stray marks or the next word on after it.
+const standaloneDate = /(?<![\p{L}\p{N}_/.:-])(\d{1,2}([/.-])\d{1,2}\2\d{4}|\d{4}([/.-])\d{1,2}\3\d{1,2})(?![\p{N}]|[/.:-]\p{N})/gu;
 const UNLABELLED_MIN_DATES = 2;
 const UNLABELLED_MIN_GAP_YEARS = 10;
 const UNLABELLED_MIN_AGE = 10;
@@ -144,6 +145,12 @@ export function parseUnlabelledBirthDate(text: string, options: { dateOrder?: Da
   if (dateTime(next.date) < gap.getTime()) return null;
   const age = ageOnDate(earliest.date, now);
   return age >= UNLABELLED_MIN_AGE && age <= UNLABELLED_MAX_AGE ? earliest.date : null;
+}
+
+/** Every real calendar date printed anywhere in OCR text; used only to confirm a date read in another pass. */
+export function printedDates(text: string, options: { dateOrder?: DateOrder } = {}): BirthDate[] {
+  if (typeof text !== 'string' || text.length > 100_000) return [];
+  return dateCandidates(normalizeText(text), options.dateOrder).filter((date): date is BirthDate => Boolean(date) && isCalendarDate(date!));
 }
 
 /** Full-page OCR must identify a DOB label. A selected region may hold one unlabelled date. */

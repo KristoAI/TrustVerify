@@ -138,6 +138,8 @@ test('an unreadable DOB label falls back to the earliest printed date only when 
   assert.deepEqual(unlabelled('D12-05-1950 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date-shaped run inside a number is ignored');
   assert.deepEqual(unlabelled('2.0on 08/24/1988-issEx M\n4aiss 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'OCR may glue the next word onto the date');
   assert.deepEqual(unlabelled('12-05-1950-7 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date followed by more digits is a number');
+  assert.deepEqual(unlabelled('eroos 08/24/1988-+ssEx M.\n4εх» 08/24/2030\n4a ss 01/02/2020\n«EP_ACED 03/04/202t'), { year: 1988, month: 8, day: 24 }, 'phone OCR glues stray marks after the date');
+  assert.deepEqual(unlabelled('X12-05-1950 08/24/1988 01/02/2020'), { year: 1988, month: 8, day: 24 }, 'a date after a letter is part of a code');
   assert.equal(unlabelled('3 DOB ?? \n' + card), null, 'a recognised DOB label leaves the decision to the labelled rules');
   assert.equal(unlabelled('2.00s 08/24/1988 ssex M\n4b EXP 08/24/2030'), null, 'needs two past dates');
   assert.equal(unlabelled('ISS 08/24/1988\n01/02/2020'), null, 'earliest date labelled as another field');
@@ -148,7 +150,7 @@ test('an unreadable DOB label falls back to the earliest printed date only when 
   assert.deepEqual(unlabelled('04/05/1991\n01/02/2020', { dateOrder: undefined }), { year: 1991, month: 5, day: 4 }, 'unknown order uses the later reading');
 });
 
-test('earliest-date fallback needs two full-image passes to agree', async t => {
+test('earliest-date fallback needs both full-image passes to have read the chosen date', async t => {
   const card = (dob) => ({ data: { text: `2.00s ${dob} ssex M\nan iss 01/02/2020\nREPLACED. 03/04/2021`, words: [] } });
   let attempts = 0;
   let fixture = browserFixture(t, { async recognize() { attempts++; return card('08/24/1988'); } });
@@ -160,6 +162,16 @@ test('earliest-date fallback needs two full-image passes to agree', async t => {
   attempts = 0;
   fixture = browserFixture(t, { async recognize() { return ++attempts === 1 ? { data: { text: 'unreadable', words: [] } } : card('08/24/1988'); } });
   await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY' }), { code: 'DATE_UNREADABLE' });
+  // One pass may choose the date when the other pass also printed it, even if that pass was too garbled to choose.
+  const garbled = () => ({ data: { text: '2 0os 08/24/1988 issex\n4a ss 0l/02/2O2O', words: [] } });
+  for (const order of [[card('08/24/1988'), garbled()], [garbled(), card('08/24/1988')]]) {
+    attempts = 0;
+    fixture = browserFixture(t, { async recognize() { return order[attempts++]; } });
+    assert.deepEqual(await readDocument({ image: fixture.image, dateOrder: 'MDY' }), { birthDate: { year: 1988, month: 8, day: 24 }, source: 'earliest-date' });
+  }
+  attempts = 0;
+  fixture = browserFixture(t, { async recognize() { return ++attempts === 1 ? card('08/24/1988') : { data: { text: '2 0os 08/24/1986 issex', words: [] } }; } });
+  await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY' }), { code: 'DATE_UNREADABLE' }, 'the other pass must show the same date');
   fixture = browserFixture(t, { async recognize() { return card('08/24/1988'); } });
   await assert.rejects(readDocument({ image: fixture.image, dateOrder: 'MDY', crop: { x: 0, y: 0, width: 1, height: 1 } }), { code: 'DATE_UNREADABLE' }, 'never for a selected region');
 });
